@@ -60,7 +60,7 @@ resource "harvester_cloudinit_secret" "rke2_node_01" {
     runcmd:
       - "dnf install -y epel-release && dnf install -y htop"
       - "mkdir -p /etc/rancher/rke2"
-      - "echo 'token: ${var.rke2_token}' > /etc/rancher/rke2/config.yaml"
+      - "printf 'token: ${var.rke2_token}\\nnode-taint: []\\n' > /etc/rancher/rke2/config.yaml"
       - "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -"
       - "systemctl enable rke2-server"
       - "systemctl start rke2-server"
@@ -131,8 +131,7 @@ resource "harvester_cloudinit_secret" "rke2_node" {
     runcmd:
       - "dnf install -y epel-release && dnf install -y htop"
       - "mkdir -p /etc/rancher/rke2"
-      - "echo 'server: https://10.10.30.10:9345' > /etc/rancher/rke2/config.yaml"
-      - "echo 'token: ${var.rke2_token}' >> /etc/rancher/rke2/config.yaml"
+      - "printf 'server: https://10.10.30.10:9345\\ntoken: ${var.rke2_token}\\nnode-taint: []\\n' > /etc/rancher/rke2/config.yaml"
       - "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -"
       - "systemctl enable rke2-server"
       - "systemctl start rke2-server"

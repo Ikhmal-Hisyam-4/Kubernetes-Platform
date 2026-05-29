@@ -83,7 +83,7 @@ variable "rke2_nodes" {
   default = {
     count  = 3
     cpu    = 4
-    memory = "8Gi"
+    memory = "6Gi"
     disk   = "100Gi"
   }
 }
