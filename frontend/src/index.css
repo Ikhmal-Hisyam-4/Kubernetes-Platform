@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: #09090B;
+    color: #FAFAFA;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { min-height: 100vh; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent-green text-black font-semibold text-sm px-5 py-2.5 rounded-md
+           hover:bg-accent-dim transition-all duration-150 inline-flex items-center gap-2;
+  }
+
+  .btn-outline {
+    @apply border border-border-default text-text-secondary text-sm px-5 py-2.5 rounded-md
+           hover:border-accent-green hover:text-accent-green transition-all duration-150
+           inline-flex items-center gap-2;
+  }
+
+  .btn-ghost {
+    @apply text-text-secondary text-sm px-5 py-2.5 rounded-md
+           hover:bg-bg-elevated hover:text-text-primary transition-all duration-150
+           inline-flex items-center gap-2;
+  }
+
+  .card {
+    @apply bg-bg-surface border border-border-subtle rounded-xl transition-all duration-200
+           hover:border-border-default;
+  }
+
+  .section-label {
+    @apply text-accent-green font-semibold text-xs tracking-widest uppercase;
+  }
+
+  .status-dot {
+    @apply w-2 h-2 rounded-full bg-accent-green animate-pulse inline-block flex-shrink-0;
+  }
+}

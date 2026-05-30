@@ -1,0 +1,42 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GpuTier {
+  id           String     @id @default(cuid())
+  tier         String
+  hardware     String
+  gpu          String
+  gpuCount     Int
+  vram         Int
+  cpu          Int
+  ram          Int
+  storage      Int
+  bandwidth    Int
+  useCase      String
+  pricePerHour Float
+  available    Int
+  total        Int
+  instances    Instance[]
+  createdAt    DateTime   @default(now())
+
+  @@map("gpu_tiers")
+}
+
+model Instance {
+  id        String   @id @default(cuid())
+  name      String
+  gpuTierId String
+  gpuTier   GpuTier  @relation(fields: [gpuTierId], references: [id])
+  os        String   @default("Ubuntu 24.04 LTS")
+  status    String   @default("Running")
+  createdAt DateTime @default(now())
+
+  @@map("instances")
+}
