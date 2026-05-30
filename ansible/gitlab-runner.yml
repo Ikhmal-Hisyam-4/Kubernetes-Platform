@@ -11,32 +11,37 @@
 
   tasks:
     - name: Install required packages
-      apt:
+      dnf:
         name:
           - curl
-          - apt-transport-https
           - ca-certificates
           - gnupg
           - unzip
         state: present
-        update_cache: true
 
-    - name: Add GitLab Runner repo key
+    - name: Add GitLab Runner repo
       shell: |
-        curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash
+        curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | bash
       args:
-        creates: /etc/apt/sources.list.d/runner_gitlab-runner.list
+        creates: /etc/yum.repos.d/runner_gitlab-runner.repo
 
     - name: Install gitlab-runner
-      apt:
+      dnf:
         name: gitlab-runner
         state: present
-        update_cache: true
 
     - name: Install Docker
-      shell: curl -fsSL https://get.docker.com | sh
+      shell: |
+        dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+        dnf install -y docker-ce docker-ce-cli containerd.io
       args:
         creates: /usr/bin/docker
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
 
     - name: Add gitlab-runner user to docker group
       user:
@@ -64,11 +69,10 @@
         gitlab-runner register
         --non-interactive
         --url "{{ gitlab_url }}"
-        --registration-token "{{ runner_registration_token }}"
+        --token "{{ runner_registration_token }}"
         --name "{{ runner_name }}"
         --executor "shell"
         --tag-list "{{ runner_tags }}"
-        --run-untagged="true"
       args:
         creates: /etc/gitlab-runner/config.toml
 
