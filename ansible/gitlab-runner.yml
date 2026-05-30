@@ -1,0 +1,79 @@
+---
+- name: Install and register GitLab Runner
+  hosts: runner
+  become: true
+
+  vars:
+    gitlab_url: "https://gitlab.com"
+    runner_registration_token: "{{ lookup('env', 'GITLAB_RUNNER_TOKEN') }}"
+    runner_name: "rgx-runner-01"
+    runner_tags: "docker,kubernetes,kubex"
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - unzip
+        state: present
+        update_cache: true
+
+    - name: Add GitLab Runner repo key
+      shell: |
+        curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash
+      args:
+        creates: /etc/apt/sources.list.d/runner_gitlab-runner.list
+
+    - name: Install gitlab-runner
+      apt:
+        name: gitlab-runner
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Add gitlab-runner user to docker group
+      user:
+        name: gitlab-runner
+        groups: docker
+        append: true
+
+    - name: Install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        creates: /usr/local/bin/kubectl
+
+    - name: Install AWS CLI
+      shell: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+        unzip -o /tmp/awscliv2.zip -d /tmp
+        /tmp/aws/install --update
+      args:
+        creates: /usr/local/bin/aws
+
+    - name: Register GitLab Runner
+      command: >
+        gitlab-runner register
+        --non-interactive
+        --url "{{ gitlab_url }}"
+        --registration-token "{{ runner_registration_token }}"
+        --name "{{ runner_name }}"
+        --executor "shell"
+        --tag-list "{{ runner_tags }}"
+        --run-untagged="true"
+      args:
+        creates: /etc/gitlab-runner/config.toml
+
+    - name: Start and enable gitlab-runner service
+      systemd:
+        name: gitlab-runner
+        state: started
+        enabled: true
