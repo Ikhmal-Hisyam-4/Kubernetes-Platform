@@ -81,8 +81,8 @@ deploy:k8s:
     - kubectl apply -f k8s/namespace.yaml
     - kubectl create secret docker-registry ecr-secret --docker-server=$ECR_REGISTRY --docker-username=AWS --docker-password=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION) --namespace kubex --dry-run=client -o yaml | kubectl apply -f -
     - kubectl apply -f k8s/
-    - kubectl rollout status deployment/frontend -n kubex --timeout=120s
-    - kubectl rollout status deployment/backend -n kubex --timeout=120s
+    - kubectl rollout status deployment/frontend -n kubex --timeout=300s
+    - kubectl rollout status deployment/backend -n kubex --timeout=300s
     - kubectl get pods -n kubex
   only:
     - main
