@@ -78,6 +78,7 @@ deploy:k8s:
   script:
     - echo $KUBECONFIG_B64 | base64 -d > /tmp/kubeconfig
     - export KUBECONFIG=/tmp/kubeconfig
+    - kubectl apply -f k8s/namespace.yaml
     - kubectl apply -f k8s/
     - kubectl rollout status deployment/frontend -n kubex --timeout=120s
     - kubectl rollout status deployment/backend -n kubex --timeout=120s
