@@ -47,9 +47,12 @@ spec:
                 secretKeyRef:
                   name: kubex-secret
                   key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+              subPath: pgdata
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "kubex", "-d", "kubex_db"]
