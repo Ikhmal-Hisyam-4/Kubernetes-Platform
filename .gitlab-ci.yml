@@ -14,7 +14,6 @@ variables:
 
 test:frontend:
   stage: test
-  image: node:20-alpine
   script:
     - cd frontend
     - npm install
@@ -24,7 +23,6 @@ test:frontend:
 
 test:backend:
   stage: test
-  image: node:20-alpine
   script:
     - cd backend
     - npm install
