@@ -59,17 +59,24 @@ resource "harvester_cloudinit_secret" "rke2_node_01" {
 
     runcmd:
       - "dnf install -y epel-release && dnf install -y htop"
+      - "sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/50-cloud-init.conf || true"
+      - "systemctl restart sshd"
       - "mkdir -p /etc/rancher/rke2"
       - "printf 'token: ${var.rke2_token}\\nnode-taint: []\\n' > /etc/rancher/rke2/config.yaml"
       - "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -"
       - "systemctl enable rke2-server"
       - "systemctl start rke2-server"
+      - "until [ -f /etc/rancher/rke2/rke2.yaml ]; do sleep 5; done"
       - "mkdir -p /root/.kube"
       - "cp /etc/rancher/rke2/rke2.yaml /root/.kube/config"
       - "chmod 600 /root/.kube/config"
       - "ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl"
-      - "sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/50-cloud-init.conf || true"
-      - "systemctl restart sshd"
+      - "mkdir -p /home/ikhmal/.kube"
+      - "cp /etc/rancher/rke2/rke2.yaml /home/ikhmal/.kube/config"
+      - "chown -R ikhmal:ikhmal /home/ikhmal/.kube"
+      - "chmod 600 /home/ikhmal/.kube/config"
+      - "echo 'export PATH=$PATH:/var/lib/rancher/rke2/bin' >> /home/ikhmal/.bashrc"
+      - "echo 'export KUBECONFIG=/home/ikhmal/.kube/config' >> /home/ikhmal/.bashrc"
   EOF
 
   network_data = <<-EOF
@@ -130,17 +137,18 @@ resource "harvester_cloudinit_secret" "rke2_node" {
 
     runcmd:
       - "dnf install -y epel-release && dnf install -y htop"
+      - "sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/50-cloud-init.conf || true"
+      - "systemctl restart sshd"
       - "mkdir -p /etc/rancher/rke2"
       - "printf 'server: https://10.10.30.10:9345\\ntoken: ${var.rke2_token}\\nnode-taint: []\\n' > /etc/rancher/rke2/config.yaml"
       - "curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE=server sh -"
       - "systemctl enable rke2-server"
       - "systemctl start rke2-server"
+      - "until [ -f /etc/rancher/rke2/rke2.yaml ]; do sleep 5; done"
       - "mkdir -p /root/.kube"
       - "cp /etc/rancher/rke2/rke2.yaml /root/.kube/config"
       - "chmod 600 /root/.kube/config"
       - "ln -s /var/lib/rancher/rke2/bin/kubectl /usr/local/bin/kubectl"
-      - "sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/50-cloud-init.conf || true"
-      - "systemctl restart sshd"
   EOF
 
   network_data = <<-EOF
