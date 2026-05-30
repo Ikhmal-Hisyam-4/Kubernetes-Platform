@@ -13,6 +13,8 @@ spec:
       labels:
         app: backend
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: backend
           image: 164092712009.dkr.ecr.ap-southeast-1.amazonaws.com/kubex/backend:latest

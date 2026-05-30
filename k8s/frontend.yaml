@@ -13,6 +13,8 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: frontend
           image: 164092712009.dkr.ecr.ap-southeast-1.amazonaws.com/kubex/frontend:latest
