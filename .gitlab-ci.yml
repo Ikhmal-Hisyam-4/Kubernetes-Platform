@@ -14,6 +14,8 @@ variables:
 
 test:frontend:
   stage: test
+  tags:
+    - kubex
   script:
     - cd frontend
     - npm install
@@ -23,6 +25,8 @@ test:frontend:
 
 test:backend:
   stage: test
+  tags:
+    - kubex
   script:
     - cd backend
     - npm install
