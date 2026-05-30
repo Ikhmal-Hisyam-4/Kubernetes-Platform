@@ -24,7 +24,7 @@ function loadInstances(): Instance[] {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return defaultInstances
     const parsed: Instance[] = JSON.parse(saved)
-    return parsed.map(i => ({ os: 'Ubuntu 24.04 LTS', ...i }))
+    return parsed.map(i => ({ ...i, os: i.os ?? 'Ubuntu 24.04 LTS' }))
   } catch {
     return defaultInstances
   }
