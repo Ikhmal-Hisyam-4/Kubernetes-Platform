@@ -10,7 +10,7 @@ variables:
   FRONTEND_IMAGE: $ECR_REGISTRY/kubex/frontend
   BACKEND_IMAGE: $ECR_REGISTRY/kubex/backend
 
-# ─── STAGE 1: TEST ────────────────────────────────────────────────────────────
+# STAGE 1: TEST
 
 test:frontend:
   stage: test
@@ -32,7 +32,7 @@ test:backend:
   only:
     - main
 
-# ─── STAGE 2: BUILD ───────────────────────────────────────────────────────────
+# STAGE 2: BUILD
 
 build:frontend:
   stage: build
@@ -52,7 +52,7 @@ build:backend:
   only:
     - main
 
-# ─── STAGE 3: PUSH ────────────────────────────────────────────────────────────
+# STAGE 3: PUSH
 
 push:images:
   stage: push
@@ -67,7 +67,7 @@ push:images:
   only:
     - main
 
-# ─── STAGE 4: DEPLOY ──────────────────────────────────────────────────────────
+# STAGE 4: DEPLOY
 
 deploy:k8s:
   stage: deploy
