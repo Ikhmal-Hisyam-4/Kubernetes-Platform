@@ -7,9 +7,6 @@
 ![GitLab CI](https://img.shields.io/badge/CI%2FCD-GitLab-FC6D26?style=flat-square&logo=gitlab&logoColor=white)
 ![Docker](https://img.shields.io/badge/Container-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![AWS ECR](https://img.shields.io/badge/Registry-AWS%20ECR-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
-![React](https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB?style=flat-square&logo=react&logoColor=black)
-![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Monitoring-Grafana%20%2B%20Prometheus-F46800?style=flat-square&logo=grafana&logoColor=white)
 
 An end-to-end homelab infrastructure project built completely from scratch — starting from bare-metal servers and a raw managed switch, all the way up to a live, HTTPS-secured web application running on a self-managed Kubernetes cluster.
