@@ -21,51 +21,7 @@ The application simulates a **GPU cloud marketplace** called Kubex — where use
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐   ┌──────────────────────────────────┐
-│                  ON-PREMISES INFRASTRUCTURE                  │   │         CI/CD PIPELINE           │
-│                                                             │   │                                  │
-│  Internet / End Users                                       │   │  GitLab (gitlab.com)             │
-│  gpu.kubex.my (via Cloudflare Tunnel)                       │   │          │ trigger               │
-│           │                                                 │   │  GitLab Runner (rgx-node-01)     │
-│           ▼                                                 │   │          │                       │
-│  pfSense Firewall (10.10.10.1)                              │   │  ┌───────▼────────────────────┐  │
-│           │                                                 │   │  │ 1. Test (tsc --noEmit)     │  │
-│  Core Switch — S3900-24T4S (10.10.10.2)                     │   │  │ 2. Docker Build            │  │
-│  VLANs: 10-Mgmt | 30-VM Network | 40-Storage | 50-K8s      │   │  │ 3. Push to AWS ECR         │  │
-│           │                                                 │   │  │ 4. kubectl apply → RKE2    │  │
-│  ┌────────┴──────────────────────────────────────────────┐  │   │  └────────────────────────────┘  │
-│  │  Harvester Virtualization Cluster                      │  │   │                                  │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐     │  │   └──────────────────────────────────┘
-│  │  │ lab-hvst-01 │ │ lab-hvst-02 │ │ lab-hvst-03 │     │  │
-│  │  │ 10.10.10.11 │ │ 10.10.10.12 │ │ 10.10.10.13 │     │  │   ┌──────────────────────────────────┐
-│  │  └─────────────┘ └─────────────┘ └─────────────┘     │  │   │           AWS CLOUD              │
-│  └───────────────────────────┬───────────────────────────┘  │   │                                  │
-│                               │                              │   │  AWS ECR — Container Registry    │
-│  Rancher Manager (10.10.10.10)│                              │   │  AWS S3  — Backup Storage        │
-│  Provision & manage K8s cluster                             │   └──────────────────────────────────┘
-│                               ▼                             │
-│  Longhorn Distributed Storage (VLAN 40)                     │
-│                               │                             │
-│  ┌────────────────────────────▼────────────────────────┐   │
-│  │  RKE2 Kubernetes Cluster — rgx-cluster (VLAN 30/50) │   │
-│  │                                                      │   │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │   │
-│  │  │ rgx-node-01 │ │ rgx-node-02 │ │ rgx-node-03 │   │   │
-│  │  │ 10.10.30.10 │ │ 10.10.30.11 │ │ 10.10.30.12 │   │   │
-│  │  │ control-plane + etcd + worker (all 3 nodes)   │   │   │
-│  │  └─────────────────────────────────────────────┘   │   │
-│  │                                                      │   │
-│  │  ┌─────────────────────┐  ┌───────────────────────┐ │   │
-│  │  │  Observability       │  │  Application (kubex)  │ │   │
-│  │  │  Prometheus (metrics)│  │  frontend (React)     │ │   │
-│  │  │  Loki (logs)        │  │  backend (Node.js)    │ │   │
-│  │  │  Grafana (dashboards)│  │  postgres (Longhorn)  │ │   │
-│  │  └─────────────────────┘  └───────────────────────┘ │   │
-│  │  Calico CNI (VLAN 50 — Kubernetes Network)           │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+![Architecture Diagram](architecture-diagram/architecture-diagram.png)
 
 ---
 
