@@ -227,7 +227,7 @@ git push → GitLab
 | Service | Access | Purpose |
 |---|---|---|
 | Grafana | `http://10.10.30.10:30300` | Dashboards — node metrics, pod health, logs |
-| Prometheus | `kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090` | Metrics + PromQL queries |
+| Prometheus | `http://10.10.30.10:30090` | Metrics + PromQL queries |
 | Loki | via Grafana → Explore | Log aggregation from all pods via Promtail DaemonSet |
 
 **Useful PromQL queries:**
