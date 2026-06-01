@@ -19,7 +19,7 @@ The application simulates a **GPU cloud marketplace** called Kubex — where use
 
 ---
 
-## Architecture
+## Architecture Diagram
 
 ![Architecture Diagram](architecture-diagram/architecture-diagram.png)
 
