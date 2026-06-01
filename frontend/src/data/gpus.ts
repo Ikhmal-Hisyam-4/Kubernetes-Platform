@@ -36,7 +36,7 @@ export const gpus: GPU[] = [
     id: 'rtx-6000-2x',
     tier: 'Pro',
     hardware: 'RTX Pro Server',
-    gpu: 'RTX 6000 Ada',
+    gpu: 'RTX PRO 6000 Blackwell',
     gpuCount: 2,
     vram: 96,
     cpu: 64,

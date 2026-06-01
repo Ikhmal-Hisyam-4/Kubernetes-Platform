@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
 import Home from './pages/Home'
 import GPUs from './pages/GPUs'
 import Pricing from './pages/Pricing'
@@ -9,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <div className="min-h-screen bg-bg-base flex flex-col">
         <Navbar />
         <main className="flex-1">

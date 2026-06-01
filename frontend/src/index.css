@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,38 +12,116 @@
     color: #FAFAFA;
     font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Space Grotesk', sans-serif;
   }
   #root { min-height: 100vh; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer components {
+  /* --- Buttons --- */
   .btn-primary {
-    @apply bg-accent-green text-black font-semibold text-sm px-5 py-2.5 rounded-md
-           hover:bg-accent-dim transition-all duration-150 inline-flex items-center gap-2;
+    @apply bg-accent-green text-black font-semibold text-sm px-5 py-2.5 rounded-lg
+           hover:bg-accent-dim active:scale-[0.98] transition-all duration-150
+           inline-flex items-center gap-2 cursor-pointer select-none;
   }
 
   .btn-outline {
-    @apply border border-border-default text-text-secondary text-sm px-5 py-2.5 rounded-md
+    @apply border border-border-default text-text-secondary text-sm px-5 py-2.5 rounded-lg
            hover:border-accent-green hover:text-accent-green transition-all duration-150
-           inline-flex items-center gap-2;
+           inline-flex items-center gap-2 cursor-pointer select-none;
   }
 
   .btn-ghost {
-    @apply text-text-secondary text-sm px-5 py-2.5 rounded-md
+    @apply text-text-secondary text-sm px-5 py-2.5 rounded-lg
            hover:bg-bg-elevated hover:text-text-primary transition-all duration-150
-           inline-flex items-center gap-2;
+           inline-flex items-center gap-2 cursor-pointer select-none;
   }
 
+  /* --- Cards --- */
   .card {
-    @apply bg-bg-surface border border-border-subtle rounded-xl transition-all duration-200
+    @apply bg-bg-surface border border-border-subtle rounded-2xl transition-all duration-200
            hover:border-border-default;
   }
 
-  .section-label {
-    @apply text-accent-green font-semibold text-xs tracking-widest uppercase;
+  .card-glow {
+    @apply card border-accent-green/40 shadow-glow;
   }
 
+  /* --- Labels --- */
+  .section-label {
+    @apply text-accent-green font-semibold text-xs tracking-widest uppercase font-sans;
+  }
+
+  /* --- Status --- */
   .status-dot {
     @apply w-2 h-2 rounded-full bg-accent-green animate-pulse inline-block flex-shrink-0;
   }
+
+  /* --- Dot grid background --- */
+  .dot-grid {
+    background-image: radial-gradient(circle, #27272A 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* --- Gradient text --- */
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-green to-emerald-300 bg-clip-text text-transparent;
+  }
+
+  /* --- Glow line separator --- */
+  .glow-line {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(62,207,142,0.3), transparent);
+  }
+
+  /* --- Input base --- */
+  .input-base {
+    @apply w-full bg-bg-elevated border border-border-subtle text-text-primary text-sm
+           px-3 py-2.5 rounded-lg focus:outline-none focus:border-accent-green
+           focus:ring-1 focus:ring-accent-green/20 transition-all placeholder:text-text-muted;
+  }
+
+  /* --- Tag / badge --- */
+  .tag {
+    @apply text-xs px-2.5 py-0.5 rounded-full border font-medium;
+  }
+}
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fadeUp 0.5s ease forwards;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease forwards;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
 }
