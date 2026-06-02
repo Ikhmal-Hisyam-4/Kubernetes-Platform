@@ -12,7 +12,7 @@ type Instance = {
   pricePerHour: number
 }
 
-const STORAGE_KEY = 'kubex_instances_v2'
+const STORAGE_KEY = 'kubex_instances_v3'
 
 const defaultInstances: Instance[] = [
   {
@@ -267,8 +267,8 @@ export default function Dashboard() {
               </div>
 
               <div className="hidden md:grid px-6 py-2.5 border-b border-border-subtle bg-bg-elevated"
-                   style={{ gridTemplateColumns: '1fr 150px 80px 90px 70px' }}>
-                {['Instance', 'GPU', 'Uptime', 'Cost', 'Status'].map(h => (
+                   style={{ gridTemplateColumns: '1fr 150px 110px 80px 90px 70px' }}>
+                {['Instance', 'GPU', 'OS', 'Uptime', 'Cost', 'Status'].map(h => (
                   <span key={h} className="text-xs text-text-muted font-medium">{h}</span>
                 ))}
               </div>
@@ -285,7 +285,7 @@ export default function Dashboard() {
                   <div
                     key={inst.id}
                     className="hidden md:grid items-center px-6 py-4 hover:bg-bg-elevated transition-colors"
-                    style={{ gridTemplateColumns: '1fr 150px 80px 90px 70px' }}
+                    style={{ gridTemplateColumns: '1fr 150px 110px 80px 90px 70px' }}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -299,6 +299,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <p className="text-xs text-text-secondary truncate pr-2">{inst.gpu}</p>
+                    <p className="text-xs text-text-muted truncate pr-2">{inst.os}</p>
                     <p className="text-xs text-text-primary">{formatUptime(inst.startedAt)}</p>
                     <p className="text-xs text-accent-green font-medium">{calcCost(inst.startedAt, inst.pricePerHour)}</p>
                     <div className="flex items-center gap-2">
