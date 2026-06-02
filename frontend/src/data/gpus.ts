@@ -52,7 +52,7 @@ export const gpus: GPU[] = [
     id: 'blackwell-gb10',
     tier: 'AI Workstation',
     hardware: 'GB10 Superchip',
-    gpu: 'NVIDIA Blackwell',
+    gpu: 'GB10 Superchip',
     gpuCount: 1,
     vram: 128,
     cpu: 20,

@@ -168,7 +168,7 @@ export default function Dashboard() {
                     value={instanceName}
                     onChange={e => setInstanceName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleDeploy()}
-                    placeholder="my-training-run"
+                    placeholder=""
                     className="input-base"
                   />
                 </div>
