@@ -11,7 +11,7 @@
 
 An end-to-end DevOps project built completely from scratch — starting from bare-metal servers and a raw managed switch, all the way up to a live, HTTPS-secured web application running on a self-managed Kubernetes cluster.
 
-The application simulates a **GPU cloud marketplace** called Kubex — where users can browse GPU instances (RTX 4090, RTX 6000, Blackwell GB10), view pricing, and deploy servers. It's modelled after platforms like vast.ai and TensorDock, built on self-managed on-premises infrastructure.
+The application simulates a **GPU cloud marketplace** called Kubex — where users can browse GPU instances (RTX 4090, RTX 6000, Blackwell GB10), view pricing, and deploy servers. Modelled after platforms like vast.ai and TensorDock, running on fully self-managed infrastructure.
 
 > **Live:** https://gpu.kubex.my
 > **Full Documentation:** https://www.notion.so/370f5cca41248112ad22f06d5a35f8f6
