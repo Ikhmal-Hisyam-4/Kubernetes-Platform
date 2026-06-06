@@ -217,8 +217,10 @@ git push → GitLab
 
 **Key details:**
 - Images tagged with `$CI_COMMIT_SHORT_SHA` — every image traceable to a specific commit
+- `kubectl set image` with commit SHA forces Kubernetes to pull the new image on every deploy (using `latest` alone does not trigger a pull)
 - ECR pull secret recreated idempotently on every deploy (`--dry-run=client | kubectl apply`)
-- `kubectl rollout status --timeout=300s` — pipeline fails if pods don't become healthy
+- `kubectl rollout status --timeout=300s` — pipeline fails if pods don't become healthy within 5 minutes
+- No Cloudflare steps needed in the pipeline — the `cloudflared` tunnel stays connected to the cluster continuously and automatically routes to the newly deployed pods once they become healthy
 
 ---
 
@@ -266,6 +268,43 @@ A GPU cloud marketplace with 4 pages:
 - `GET /api/gpus` — GPU catalogue with pricing and availability
 - `GET /api/instances` — User's deployed instances
 - `GET /health` — Healthcheck (used by Kubernetes readiness probe)
+
+---
+
+## Public Access — Cloudflare Tunnel
+
+The application is live at **https://gpu.kubex.my** with a valid TLS certificate. There are no open inbound ports on the home router and no static public IP required.
+
+Instead of port-forwarding through the router, a `cloudflared` daemon runs inside the cluster and maintains a persistent outbound tunnel to Cloudflare's edge.
+
+```
+Internet user
+     |
+Cloudflare Edge  (terminates TLS — gpu.kubex.my)
+     |
+Cloudflare Tunnel  (encrypted outbound connection from inside the cluster)
+     |
+cloudflared pod  (running in the cluster, initiates the tunnel)
+     |
+NGINX Ingress Controller
+     |
+     ├── /api  →  backend-svc:3001  →  Backend Pod
+     └── /     →  frontend-svc:80   →  Frontend Pod
+```
+
+**Why Cloudflare Tunnel instead of port forwarding:**
+- No inbound firewall rules needed on the home router
+- Works even behind CGNAT — no public IP required
+- TLS certificate managed automatically by Cloudflare
+- DDoS protection included at the edge
+- The cluster never exposes any port to the internet directly
+
+| Item | Detail |
+|---|---|
+| **URL** | https://gpu.kubex.my |
+| **TLS** | Cloudflare-managed certificate |
+| **Deploy time** | ~3–5 minutes from `git push` to live |
+| **HA** | Survives 1 node failure (3-node etcd quorum + Longhorn 3x replication) |
 
 ---
 
