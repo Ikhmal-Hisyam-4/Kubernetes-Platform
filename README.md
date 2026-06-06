@@ -325,7 +325,7 @@ NGINX Ingress Controller
 
 ## Author
 
-**Ikhmal** — Platform / Infrastructure Engineer
+**Ikhmal** — DevOps Engineer
 
 - GitHub: [Ikhmal-Hisyam-4/Kubernetes-Platform](https://github.com/Ikhmal-Hisyam-4/Kubernetes-Platform)
 - GitLab: [gitlab.com/ikhmal/kubernetes-platform](https://gitlab.com/ikhmal/kubernetes-platform)
