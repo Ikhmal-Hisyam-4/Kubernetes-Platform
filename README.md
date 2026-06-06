@@ -9,9 +9,9 @@
 ![AWS ECR](https://img.shields.io/badge/Registry-AWS%20ECR-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Monitoring-Grafana%20%2B%20Prometheus-F46800?style=flat-square&logo=grafana&logoColor=white)
 
-An end-to-end homelab infrastructure project built completely from scratch — starting from bare-metal servers and a raw managed switch, all the way up to a live, HTTPS-secured web application running on a self-managed Kubernetes cluster.
+An end-to-end DevOps project built completely from scratch — starting from bare-metal servers and a raw managed switch, all the way up to a live, HTTPS-secured web application running on a self-managed Kubernetes cluster.
 
-The application simulates a **GPU cloud marketplace** called Kubex — where users can browse GPU instances (RTX 4090, RTX 6000, Blackwell GB10), view pricing, and deploy servers. It's modelled after platforms like vast.ai and TensorDock, but the entire infrastructure behind it is fully self-hosted on-premises.
+The application simulates a **GPU cloud marketplace** called Kubex — where users can browse GPU instances (RTX 4090, RTX 6000, Blackwell GB10), view pricing, and deploy servers. It's modelled after platforms like vast.ai and TensorDock, built on self-managed on-premises infrastructure.
 
 > **Live:** https://gpu.kubex.my
 > **Full Documentation:** https://www.notion.so/370f5cca41248112ad22f06d5a35f8f6
