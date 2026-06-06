@@ -8,31 +8,14 @@
 ![Docker](https://img.shields.io/badge/Container-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![AWS ECR](https://img.shields.io/badge/Registry-AWS%20ECR-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Monitoring-Grafana%20%2B%20Prometheus-F46800?style=flat-square&logo=grafana&logoColor=white)
-![Cloudflare](https://img.shields.io/badge/Tunnel-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white)
 
-A production-grade homelab built entirely from scratch — starting from bare-metal servers and a raw managed switch, ending with a live HTTPS application running on a self-managed Kubernetes cluster, secured through Cloudflare Tunnel with zero open inbound firewall ports.
+An end-to-end homelab infrastructure project built completely from scratch — starting from bare-metal servers and a raw managed switch, all the way up to a live, HTTPS-secured web application running on a self-managed Kubernetes cluster.
 
-The application is **Kubex**, a simulated GPU cloud marketplace where users browse GPU instances (RTX 4090, RTX PRO 6000 Blackwell, GB10 Superchip), view pricing, and deploy servers — modelled after platforms like vast.ai and TensorDock. Every layer of infrastructure is self-hosted and self-managed.
+The application simulates a **GPU cloud marketplace** called Kubex — where users can browse GPU instances (RTX 4090, RTX 6000, Blackwell GB10), view pricing, and deploy servers. It's modelled after platforms like vast.ai and TensorDock, but the entire infrastructure behind it is fully self-hosted on-premises.
 
 > **Live:** https://gpu.kubex.my
 > **Full Documentation:** https://www.notion.so/370f5cca41248112ad22f06d5a35f8f6
-> **GitLab (CI/CD):** https://gitlab.com/ikhmal/kubernetes-platform
-
----
-
-## What This Demonstrates
-
-This project covers the full platform engineering stack end-to-end:
-
-| Skill Area | What Was Built |
-|---|---|
-| **Infrastructure as Code** | Terraform provisions VMs on Harvester HCI; Ansible bootstraps RKE2 and deploys the full monitoring stack |
-| **Kubernetes** | Self-managed RKE2 cluster (3 nodes, all roles); Longhorn distributed storage; Calico CNI; NGINX ingress |
-| **CI/CD** | 4-stage GitLab pipeline (test → build → push → deploy) with self-hosted runner; images pinned to commit SHA |
-| **Observability** | kube-prometheus-stack + Loki + Promtail; node-exporter patched for RKE2 SELinux constraints |
-| **Networking** | 4-VLAN segmentation (management / VM / storage / Kubernetes); pfSense firewall; managed switch config |
-| **Security** | Zero open inbound ports via Cloudflare Tunnel; HTTPS on a custom domain without exposing the home IP |
-| **Application** | Full-stack app (React + Node.js + PostgreSQL) containerised, deployed to Kubernetes, served to the internet |
+> **GitLab:** https://gitlab.com/ikhmal/kubernetes-platform
 
 ---
 
@@ -61,7 +44,7 @@ This project covers the full platform engineering stack end-to-end:
 | **Containers** | Docker (multi-stage Dockerfiles) | Local dev via docker-compose |
 | **Registry** | AWS ECR (ap-southeast-1) | kubex/frontend + kubex/backend |
 | **CI/CD** | GitLab CI + self-hosted Runner | 4 stages, shell executor on rgx-node-01 |
-| **Public Access** | Cloudflare Tunnel | HTTPS with custom domain, zero open inbound ports |
+| **Public Access** | Cloudflare Tunnel | HTTPS, no open inbound ports required |
 | **Backup** | AWS S3 | Harvester VM snapshots |
 
 ---
@@ -78,32 +61,6 @@ This project covers the full platform engineering stack end-to-end:
 | 50 | Kubernetes | 10.10.50.0/24 | Pod and service networking |
 
 Each Harvester node has 2 NICs — `eno1` for management (VLAN 10) and `eno2` dedicated to storage (VLAN 40). This ensures Longhorn replication never competes with cluster traffic.
-
----
-
-## Public Access via Cloudflare Tunnel
-
-The live site at **https://gpu.kubex.my** is exposed through a **Cloudflare Tunnel** — no firewall ports are open on the router or switch. This is the same approach used by teams who want to publish internal services securely without a public IP or open inbound rules.
-
-**How it works:**
-
-```
-Browser → Cloudflare Edge (HTTPS)
-              ↓
-         Cloudflare Tunnel (outbound-only connection from cluster)
-              ↓
-         cloudflared pod (inside Kubernetes)
-              ↓
-         NGINX Ingress → frontend-svc / backend-svc
-```
-
-The `cloudflared` daemon inside the cluster establishes a persistent outbound connection to Cloudflare's edge. Cloudflare terminates TLS, enforces the custom domain, and proxies traffic inward — the home network has no open ports at any layer.
-
-**Benefits for this setup:**
-- No dynamic DNS or port-forwarding rules on pfSense
-- TLS certificate managed entirely by Cloudflare
-- Home IP is never exposed in DNS
-- Access control can be layered on via Cloudflare Access if needed
 
 ---
 
@@ -241,7 +198,7 @@ kubectl get pods -n kubex
 
 ## CI/CD Pipeline
 
-Every push to `main` triggers the full pipeline. From `git push` to live at gpu.kubex.my in ~3–5 minutes.
+Every push to `main` triggers the full pipeline. From `git push` to live deployment in ~3-5 minutes.
 
 ```
 git push → GitLab
@@ -255,19 +212,13 @@ git push → GitLab
          │  deploy   kubectl apply -f k8s/ + rollout status    │  fails pipeline if unhealthy
          └────────────────────────────────────────────────────┘
                |
-         Kubernetes pulls new image from ECR
-               |
-         Cloudflare Tunnel picks up the updated pod automatically
-               |
          gpu.kubex.my updated live
 ```
 
 **Key details:**
-- Images tagged with `$CI_COMMIT_SHORT_SHA` — every running image is traceable to a specific commit
-- `kubectl set image` with the commit SHA forces Kubernetes to pull the new image on every deploy (using `latest` alone does not)
+- Images tagged with `$CI_COMMIT_SHORT_SHA` — every image traceable to a specific commit
 - ECR pull secret recreated idempotently on every deploy (`--dry-run=client | kubectl apply`)
-- `kubectl rollout status --timeout=300s` — pipeline fails if pods don't become healthy within 5 minutes
-- Cloudflare Tunnel requires no pipeline steps — it stays connected to the cluster continuously and automatically routes to healthy pods
+- `kubectl rollout status --timeout=300s` — pipeline fails if pods don't become healthy
 
 ---
 
@@ -278,8 +229,6 @@ git push → GitLab
 | Grafana | `http://10.10.30.10:30300` | Dashboards — node metrics, pod health, logs |
 | Prometheus | `http://10.10.30.10:30090` | Metrics + PromQL queries |
 | Loki | via Grafana → Explore | Log aggregation from all pods via Promtail DaemonSet |
-
-**node-exporter SELinux patch:** RKE2 runs with SELinux enforcing. The default node-exporter DaemonSet fails to mount `/proc` and `/sys` on Rocky Linux 9.7 without explicit `privileged: true` and `type: spc_t` SELinux context. The Ansible playbook applies this patch automatically so all host-level metrics are collected correctly.
 
 **Useful PromQL queries:**
 ```
@@ -308,10 +257,10 @@ A GPU cloud marketplace with 4 pages:
 
 | Route | Page | Description |
 |---|---|---|
-| `/` | Home | Hero section, live GPU availability widget, GPU tiers |
+| `/` | Home | Hero section, live GPU availability widget, hardware tiers |
 | `/gpus` | GPU Instances | Filterable marketplace (Entry / Pro / AI Workstation) |
 | `/pricing` | Pricing | Per-second billing cards, hourly/monthly estimates, FAQ |
-| `/dashboard` | Dashboard | Deployed instances view with live cost tracking |
+| `/dashboard` | Dashboard | Deployed instances view |
 
 **Backend API endpoints:**
 - `GET /api/gpus` — GPU catalogue with pricing and availability
