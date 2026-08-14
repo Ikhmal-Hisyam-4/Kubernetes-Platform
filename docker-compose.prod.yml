@@ -7,7 +7,7 @@
 #   DOCKERHUB_USERNAME=...
 #   IMAGE_TAG=prod-<sha>      # rewritten by the deploy workflow on every release
 #   POSTGRES_PASSWORD=...
-#   SECRET_KEY=...
+#   JWT_SECRET=...          # signs auth tokens — must match Settings.jwt_secret in app/core/config.py
 #   FRONTEND_URL=https://your-domain
 
 services:
@@ -46,7 +46,7 @@ services:
       DATABASE_URL: postgresql://kubex:${POSTGRES_PASSWORD}@postgres:5432/kubex_db
       REDIS_URL: redis://redis:6379/0
       FRONTEND_URL: ${FRONTEND_URL}
-      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
     expose:
       - "8000"
     depends_on:
