@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { KeyIcon, LockIcon } from '../components/icons'
+import { useConfirm } from '../lib/useConfirm'
 import type { SshKey } from '../lib/types'
 
 export function SecretsPage() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [publicKey, setPublicKey] = useState('')
@@ -112,10 +114,12 @@ export function SecretsPage() {
                     </td>
                     <td className="px-5 py-3">
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Delete SSH key "${key.name}"? This cannot be undone.`)) {
-                            deleteMutation.mutate(key.id)
-                          }
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: `Delete SSH key "${key.name}"?`,
+                            description: 'This cannot be undone.',
+                          })
+                          if (ok) deleteMutation.mutate(key.id)
                         }}
                         className="text-xs font-medium text-red-600 hover:underline"
                       >

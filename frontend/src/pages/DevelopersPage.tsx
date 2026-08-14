@@ -4,10 +4,12 @@ import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { PageHeader } from '../components/PageHeader'
 import { CodeIcon } from '../components/icons'
+import { useConfirm } from '../lib/useConfirm'
 import type { ApiKey, ApiKeyCreated } from '../lib/types'
 
 export function DevelopersPage() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [revealedKey, setRevealedKey] = useState<string | null>(null)
@@ -129,10 +131,13 @@ export function DevelopersPage() {
                     </td>
                     <td className="px-5 py-3">
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Delete API key "${key.name}"? This cannot be undone.`)) {
-                            deleteMutation.mutate(key.id)
-                          }
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: `Revoke API key "${key.name}"?`,
+                            description: 'This cannot be undone.',
+                            confirmLabel: 'Revoke',
+                          })
+                          if (ok) deleteMutation.mutate(key.id)
                         }}
                         className="text-xs font-medium text-red-600 hover:underline"
                       >

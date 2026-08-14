@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { formatRateCents } from '../lib/money'
 import { ServerIcon, SearchIcon, GridIcon, ListIcon, ChevronDownIcon, ActivityIcon, SortIcon } from '../components/icons'
+import { useConfirm } from '../lib/useConfirm'
 import type { Instance, InstanceStatus } from '../lib/types'
 
 const statusColors: Record<string, string> = {
@@ -95,10 +96,15 @@ function InstanceCard({ instance }: { instance: Instance }) {
     onSuccess: invalidate,
   })
 
-  function handleDelete() {
-    if (window.confirm(`Terminate "${instance.name}"? This cannot be undone.`)) {
-      deleteMutation.mutate()
-    }
+  const confirm = useConfirm()
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Terminate "${instance.name}"?`,
+      description: 'This cannot be undone.',
+      confirmLabel: 'Terminate',
+    })
+    if (ok) deleteMutation.mutate()
   }
 
   const rate =
@@ -192,10 +198,15 @@ function InstanceRow({ instance }: { instance: Instance }) {
     onSuccess: invalidate,
   })
 
-  function handleDelete() {
-    if (window.confirm(`Terminate "${instance.name}"? This cannot be undone.`)) {
-      deleteMutation.mutate()
-    }
+  const confirm = useConfirm()
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `Terminate "${instance.name}"?`,
+      description: 'This cannot be undone.',
+      confirmLabel: 'Terminate',
+    })
+    if (ok) deleteMutation.mutate()
   }
 
   const rate =
