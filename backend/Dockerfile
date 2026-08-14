@@ -1,22 +1,12 @@
-# Stage 1: build
-FROM node:20-alpine AS builder
-RUN apk add --no-cache openssl
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npx prisma generate
-RUN npm run build
+FROM python:3.12-slim
 
-# Stage 2: production
-FROM node:20-alpine
-RUN apk add --no-cache openssl
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --omit=dev
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY prisma ./prisma
-EXPOSE 3001
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

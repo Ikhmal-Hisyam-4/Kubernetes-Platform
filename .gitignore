@@ -43,3 +43,10 @@ venv/
 
 # Docker
 *.tar
+
+# Local-only project notes (not pushed to GitHub)
+CLAUDE.md
+PROGRESS.md
+
+# Windows/WSL download-marker artifacts
+*:Zone.Identifier

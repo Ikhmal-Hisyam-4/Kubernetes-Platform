@@ -1,0 +1,15 @@
+export const queryKeys = {
+  me: ['me'] as const,
+  plans: (type?: 'gpu' | 'cpu') => ['plans', type ?? 'all'] as const,
+  osImages: ['os-images'] as const,
+  instances: ['instances'] as const,
+  instance: (id: number) => ['instances', id] as const,
+  sshKeys: ['ssh-keys'] as const,
+  apiKeys: ['api-keys'] as const,
+  balance: ['billing', 'balance'] as const,
+  transactions: ['billing', 'transactions'] as const,
+  threshold: ['billing', 'threshold'] as const,
+  usage: ['usage'] as const,
+  invoice: (month: string) => ['invoices', month] as const,
+  dashboardSummary: ['dashboard', 'summary'] as const,
+}
