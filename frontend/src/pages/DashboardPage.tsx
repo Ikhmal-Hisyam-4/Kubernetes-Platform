@@ -5,6 +5,8 @@ import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { useAuth } from '../lib/auth'
 import { formatCents } from '../lib/money'
+import { demoDashboardSummary } from '../lib/demoData'
+import { DemoBanner } from '../components/DemoBanner'
 import { DatabaseIcon, DollarIcon, GridIcon, ServerIcon } from '../components/icons'
 import type { DashboardSummary } from '../lib/types'
 
@@ -36,25 +38,30 @@ function StatCard({
 }
 
 export function DashboardPage() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
 
   const { data: summary } = useQuery({
     queryKey: queryKeys.dashboardSummary,
     queryFn: async () => (await api.get<DashboardSummary>('/dashboard/summary')).data,
+    enabled: isAuthenticated,
   })
+
+  const display = isAuthenticated ? summary : demoDashboardSummary
 
   return (
     <div>
+      {!isAuthenticated && <DemoBanner />}
+
       <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-8 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900 text-sm font-semibold text-white">
-            {user?.full_name?.[0]?.toUpperCase() ?? '?'}
+            {isAuthenticated ? (user?.full_name?.[0]?.toUpperCase() ?? '?') : 'D'}
           </div>
           <div>
             <h1 className="text-base font-semibold text-neutral-900">
-              Welcome back, {user?.full_name}
+              {isAuthenticated ? `Welcome back, ${user?.full_name}` : 'Dashboard'}
             </h1>
-            <p className="text-sm text-neutral-500">Manage your GPU instances and resources</p>
+            <p className="text-sm text-neutral-500">Monitor your virtual machines and resource usage</p>
           </div>
         </div>
         <Link
@@ -69,29 +76,29 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 p-8 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Active Instances"
-          value={String(summary?.active_instances ?? 0)}
-          sub="vs. last month"
+          value={String(display?.active_instances ?? 0)}
+          sub={isAuthenticated ? 'vs. last month' : 'demo data'}
           Icon={GridIcon}
           iconBg="bg-emerald-100"
         />
         <StatCard
           label="Total Storage"
-          value={`${summary?.total_storage_gb ?? 0} GB`}
-          sub="across all instances"
+          value={`${display?.total_storage_gb ?? 0} GB`}
+          sub={isAuthenticated ? 'across all instances' : 'demo data'}
           Icon={DatabaseIcon}
           iconBg="bg-blue-100"
         />
         <StatCard
           label="Total GPUs"
-          value={String(summary?.total_gpus ?? 0)}
-          sub="active GPU count"
+          value={String(display?.total_gpus ?? 0)}
+          sub={isAuthenticated ? 'active GPU count' : 'demo data'}
           Icon={ServerIcon}
           iconBg="bg-orange-100"
         />
         <StatCard
           label="Monthly Cost"
-          value={formatCents(summary?.monthly_cost_cents ?? 0)}
-          sub="estimated this cycle"
+          value={formatCents(display?.monthly_cost_cents ?? 0)}
+          sub={isAuthenticated ? 'estimated this cycle' : 'demo data'}
           Icon={DollarIcon}
           iconBg="bg-neutral-100"
         />

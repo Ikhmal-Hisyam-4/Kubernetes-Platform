@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
-import { AuthGuard } from './components/AuthGuard'
+import { AuthGuard, PublicGuard } from './components/AuthGuard'
 import { AppLayout } from './components/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
@@ -19,26 +19,39 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        {/* The sign-in form lives at /signin, reached by clicking a "Sign In"
+            button. /login is kept as a redirect so old links and browser
+            autocomplete land on the public deploy page rather than a bare
+            sign-in form. */}
+        <Route path="/signin" element={<LoginPage />} />
+        <Route path="/login" element={<Navigate to="/deploy/gpu" replace />} />
         <Route path="/signup" element={<SignupPage />} />
 
-        <Route element={<AuthGuard />}>
+        {/* Public preview pages: viewable without signing in, showing demo
+            data + a Sign In prompt. Matches design/logout version/*.png. */}
+        <Route element={<PublicGuard />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/deploy/gpu" element={<DeployGpuPage />} />
             <Route path="/deploy/cpu" element={<DeployCpuPage />} />
             <Route path="/servers" element={<ServersPage />} />
             <Route path="/secrets" element={<SecretsPage />} />
-            <Route path="/developers" element={<DevelopersPage />} />
-            <Route path="/account" element={<AccountPage />} />
             <Route path="/billing" element={<BillingPage />} />
             <Route path="/usage" element={<UsagePage />} />
+          </Route>
+        </Route>
+
+        {/* Everything else still requires a real session. */}
+        <Route element={<AuthGuard />}>
+          <Route element={<AppLayout />}>
+            <Route path="/developers" element={<DevelopersPage />} />
+            <Route path="/account" element={<AccountPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/deploy/gpu" replace />} />
+        <Route path="*" element={<Navigate to="/deploy/gpu" replace />} />
       </Routes>
     </AuthProvider>
   )

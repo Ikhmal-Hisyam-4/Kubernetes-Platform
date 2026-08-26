@@ -1,33 +1,46 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { formatCents } from '../lib/money'
+import { useAuth } from '../lib/auth'
+import { demoBalance, demoThreshold, demoTransactions } from '../lib/demoData'
+import { DemoBanner } from '../components/DemoBanner'
 import { PageHeader } from '../components/PageHeader'
 import { CardIcon } from '../components/icons'
 import type { Threshold, Transaction } from '../lib/types'
 
 export function BillingPage() {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [depositAmount, setDepositAmount] = useState('')
   const [alertsEnabled, setAlertsEnabled] = useState(false)
   const [alertThreshold, setAlertThreshold] = useState('')
   const [topupAmount, setTopupAmount] = useState('')
 
-  const { data: balance } = useQuery({
+  const { data: balanceData } = useQuery({
     queryKey: queryKeys.balance,
     queryFn: async () => (await api.get<{ balance_cents: number }>('/billing/balance')).data,
+    enabled: isAuthenticated,
   })
 
-  const { data: threshold } = useQuery({
+  const { data: thresholdData } = useQuery({
     queryKey: queryKeys.threshold,
     queryFn: async () => (await api.get<Threshold>('/billing/threshold')).data,
+    enabled: isAuthenticated,
   })
 
-  const { data: transactions } = useQuery({
+  const { data: transactionsData } = useQuery({
     queryKey: queryKeys.transactions,
     queryFn: async () => (await api.get<Transaction[]>('/billing/transactions')).data,
+    enabled: isAuthenticated,
   })
+
+  const balance = isAuthenticated ? balanceData : demoBalance
+  const threshold = isAuthenticated ? thresholdData : demoThreshold
+  const transactions = isAuthenticated ? transactionsData : demoTransactions
 
   useEffect(() => {
     if (threshold) {
@@ -65,6 +78,8 @@ export function BillingPage() {
 
   return (
     <div>
+      {!isAuthenticated && <DemoBanner />}
+
       <PageHeader
         icon={<CardIcon className="h-4 w-4" />}
         title="Billing & Payments"
@@ -132,8 +147,8 @@ export function BillingPage() {
 
             <div className="mt-5 flex justify-end">
               <button
-                onClick={() => thresholdMutation.mutate()}
-                disabled={thresholdMutation.isPending}
+                onClick={() => (isAuthenticated ? thresholdMutation.mutate() : navigate('/signin'))}
+                disabled={isAuthenticated && thresholdMutation.isPending}
                 className="rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
               >
                 Save changes
@@ -186,8 +201,8 @@ export function BillingPage() {
               className="mb-3 w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm outline-none focus:border-neutral-400"
             />
             <button
-              onClick={() => depositMutation.mutate()}
-              disabled={depositMutation.isPending || !depositAmount}
+              onClick={() => (isAuthenticated ? depositMutation.mutate() : navigate('/signin'))}
+              disabled={isAuthenticated && (depositMutation.isPending || !depositAmount)}
               className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-40"
             >
               + Add Funds

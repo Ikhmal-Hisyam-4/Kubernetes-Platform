@@ -30,10 +30,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Drop the bad/expired token, but don't force-navigate — several
+      // pages (Deploy GPU/CPU, Dashboard, etc.) are viewable without a
+      // session and render their own "Sign in" prompt via useAuth().
+      // AuthGuard still redirects to /signin for the pages that require one.
       clearToken()
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
     }
     return Promise.reject(error)
   },

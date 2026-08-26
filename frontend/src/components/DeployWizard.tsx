@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { formatRateCents } from '../lib/money'
+import { useAuth } from '../lib/auth'
 import { CpuIcon, StarIcon } from './icons'
 import type { OsImage, Plan } from '../lib/types'
 
@@ -12,6 +13,7 @@ const HOURS_PER_MONTH = 730
 export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuth()
 
   const [step, setStep] = useState(1)
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
@@ -214,7 +216,7 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
               >
                 Continue
               </button>
-            ) : (
+            ) : isAuthenticated ? (
               <button
                 onClick={() => deployMutation.mutate()}
                 disabled={!osImage || deployMutation.isPending}
@@ -222,12 +224,28 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
               >
                 {deployMutation.isPending ? 'Deploying…' : 'Deploy Instance'}
               </button>
+            ) : (
+              <button
+                onClick={() => navigate('/signin')}
+                className="rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                Sign In to Deploy
+              </button>
             )}
           </div>
         </div>
 
-        <div className="h-fit rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-semibold text-neutral-900">Deployment Summary</h2>
+        <div className="h-fit space-y-4">
+          {!isAuthenticated && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-700">⚠ Authentication Required</p>
+              <p className="mt-0.5 text-sm text-red-600">
+                You must be logged in to deploy a virtual machine.
+              </p>
+            </div>
+          )}
+          <div className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="mb-1 text-base font-semibold text-neutral-900">Deployment Summary</h2>
           <p className="mb-5 text-sm text-neutral-500">Review your configuration</p>
 
           <dl className="space-y-3 text-sm">
@@ -282,6 +300,16 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
               </p>
             </div>
           )}
+
+          {!isAuthenticated && (
+            <button
+              onClick={() => navigate('/signin')}
+              className="mt-5 w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
+            >
+              Sign In to Continue
+            </button>
+          )}
+          </div>
         </div>
       </div>
     </div>

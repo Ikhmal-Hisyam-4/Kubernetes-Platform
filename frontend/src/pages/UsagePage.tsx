@@ -6,6 +6,8 @@ import { formatCents } from '../lib/money'
 import { PageHeader } from '../components/PageHeader'
 import { ChartIcon } from '../components/icons'
 import { useAuth } from '../lib/auth'
+import { demoUsage } from '../lib/demoData'
+import { DemoBanner } from '../components/DemoBanner'
 import type { InstanceStatus, UsageResponse } from '../lib/types'
 
 const statusStyles: Record<InstanceStatus, string> = {
@@ -23,14 +25,17 @@ const filters: { label: string; value: InstanceStatus | 'all' }[] = [
 ]
 
 export function UsagePage() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<InstanceStatus | 'all'>('all')
 
-  const { data: usage } = useQuery({
+  const { data: usageData } = useQuery({
     queryKey: queryKeys.usage,
     queryFn: async () => (await api.get<UsageResponse>('/usage')).data,
+    enabled: isAuthenticated,
   })
+
+  const usage = isAuthenticated ? usageData : demoUsage
 
   const items = usage?.items
     .filter((item) => statusFilter === 'all' || item.status === statusFilter)
@@ -38,7 +43,13 @@ export function UsagePage() {
 
   return (
     <div>
-      <PageHeader icon={<ChartIcon className="h-4 w-4" />} title="Usage" subtitle={user?.full_name ?? ''} />
+      {!isAuthenticated && <DemoBanner />}
+
+      <PageHeader
+        icon={<ChartIcon className="h-4 w-4" />}
+        title="Usage"
+        subtitle={isAuthenticated ? (user?.full_name ?? '') : 'Demo account'}
+      />
 
       <div className="p-8">
         <div className="rounded-xl border border-neutral-200 bg-white p-6">
