@@ -1,22 +1,31 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
+import { useAuth } from '../lib/auth'
+import { demoSshKeys } from '../lib/demoData'
+import { DemoBanner } from '../components/DemoBanner'
 import { KeyIcon, LockIcon } from '../components/icons'
 import { useConfirm } from '../lib/useConfirm'
 import type { SshKey } from '../lib/types'
 
 export function SecretsPage() {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const confirm = useConfirm()
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [publicKey, setPublicKey] = useState('')
 
-  const { data: keys } = useQuery({
+  const { data: keysData } = useQuery({
     queryKey: queryKeys.sshKeys,
     queryFn: async () => (await api.get<SshKey[]>('/ssh-keys')).data,
+    enabled: isAuthenticated,
   })
+
+  const keys = isAuthenticated ? keysData : demoSshKeys
 
   const createMutation = useMutation({
     mutationFn: () => api.post('/ssh-keys', { name, public_key: publicKey }),
@@ -35,6 +44,8 @@ export function SecretsPage() {
 
   return (
     <div>
+      {!isAuthenticated && <DemoBanner />}
+
       <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-8 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white">
@@ -51,7 +62,7 @@ export function SecretsPage() {
             <p className="font-bold text-neutral-900">{keys?.length ?? 0}</p>
           </div>
           <button
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => (isAuthenticated ? setShowForm((v) => !v) : navigate('/signin'))}
             className="rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
           >
             + Add Secret
@@ -61,7 +72,7 @@ export function SecretsPage() {
 
       <div className="grid grid-cols-1 gap-6 p-8 lg:grid-cols-[1fr_380px]">
         <div className="rounded-xl border border-neutral-200 bg-white">
-          {showForm && (
+          {showForm && isAuthenticated && (
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -113,18 +124,27 @@ export function SecretsPage() {
                       {new Date(key.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3">
-                      <button
-                        onClick={async () => {
-                          const ok = await confirm({
-                            title: `Delete SSH key "${key.name}"?`,
-                            description: 'This cannot be undone.',
-                          })
-                          if (ok) deleteMutation.mutate(key.id)
-                        }}
-                        className="text-xs font-medium text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
+                      {isAuthenticated ? (
+                        <button
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: `Delete SSH key "${key.name}"?`,
+                              description: 'This cannot be undone.',
+                            })
+                            if (ok) deleteMutation.mutate(key.id)
+                          }}
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => navigate('/signin')}
+                          className="text-xs font-medium text-neutral-400 hover:underline"
+                        >
+                          Sign in
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

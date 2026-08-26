@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { queryKeys } from '../lib/queryKeys'
 import { formatRateCents } from '../lib/money'
+import { useAuth } from '../lib/auth'
+import { demoInstances } from '../lib/demoData'
+import { DemoBanner } from '../components/DemoBanner'
 import { ServerIcon, SearchIcon, GridIcon, ListIcon, ChevronDownIcon, ActivityIcon, SortIcon } from '../components/icons'
 import { useConfirm } from '../lib/useConfirm'
 import type { Instance, InstanceStatus } from '../lib/types'
@@ -77,6 +80,8 @@ function Dropdown<T extends string>({
 
 function InstanceCard({ instance }: { instance: Instance }) {
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: queryKeys.instances })
@@ -143,35 +148,44 @@ function InstanceCard({ instance }: { instance: Instance }) {
 
       <div className="flex items-center justify-between border-t border-neutral-100 pt-3">
         <p className="text-sm font-semibold text-neutral-900">{formatRateCents(rate)}/hr</p>
-        <div className="flex gap-2">
-          {instance.status === 'stopped' && (
-            <button
-              onClick={() => startMutation.mutate()}
-              disabled={startMutation.isPending}
-              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Start
-            </button>
-          )}
-          {instance.status === 'running' && (
-            <button
-              onClick={() => stopMutation.mutate()}
-              disabled={stopMutation.isPending}
-              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Stop
-            </button>
-          )}
-          {instance.status !== 'terminated' && (
-            <button
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          )}
-        </div>
+        {isAuthenticated ? (
+          <div className="flex gap-2">
+            {instance.status === 'stopped' && (
+              <button
+                onClick={() => startMutation.mutate()}
+                disabled={startMutation.isPending}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Start
+              </button>
+            )}
+            {instance.status === 'running' && (
+              <button
+                onClick={() => stopMutation.mutate()}
+                disabled={stopMutation.isPending}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Stop
+              </button>
+            )}
+            {instance.status !== 'terminated' && (
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate('/signin')}
+            className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-400"
+          >
+            Sign in to manage
+          </button>
+        )}
       </div>
     </div>
   )
@@ -179,6 +193,8 @@ function InstanceCard({ instance }: { instance: Instance }) {
 
 function InstanceRow({ instance }: { instance: Instance }) {
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: queryKeys.instances })
@@ -237,41 +253,51 @@ function InstanceRow({ instance }: { instance: Instance }) {
         <p className="w-20 text-right text-sm font-semibold text-neutral-900">
           {formatRateCents(rate)}/hr
         </p>
-        <div className="flex gap-2">
-          {instance.status === 'stopped' && (
-            <button
-              onClick={() => startMutation.mutate()}
-              disabled={startMutation.isPending}
-              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Start
-            </button>
-          )}
-          {instance.status === 'running' && (
-            <button
-              onClick={() => stopMutation.mutate()}
-              disabled={stopMutation.isPending}
-              className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              Stop
-            </button>
-          )}
-          {instance.status !== 'terminated' && (
-            <button
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          )}
-        </div>
+        {isAuthenticated ? (
+          <div className="flex gap-2">
+            {instance.status === 'stopped' && (
+              <button
+                onClick={() => startMutation.mutate()}
+                disabled={startMutation.isPending}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Start
+              </button>
+            )}
+            {instance.status === 'running' && (
+              <button
+                onClick={() => stopMutation.mutate()}
+                disabled={stopMutation.isPending}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Stop
+              </button>
+            )}
+            {instance.status !== 'terminated' && (
+              <button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate('/signin')}
+            className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-400"
+          >
+            Sign in to manage
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
 export function ServersPage() {
+  const { isAuthenticated } = useAuth()
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [statusFilter, setStatusFilter] = useState<InstanceStatus | 'all'>('all')
@@ -281,6 +307,7 @@ export function ServersPage() {
   const { data: instances } = useQuery({
     queryKey: queryKeys.instances,
     queryFn: async () => (await api.get<Instance[]>('/instances')).data,
+    enabled: isAuthenticated,
     refetchInterval: (query) => {
       const data = query.state.data as Instance[] | undefined
       const hasProvisioning = data?.some((i) => i.status === 'provisioning')
@@ -288,7 +315,9 @@ export function ServersPage() {
     },
   })
 
-  const visible = instances?.filter((i) => i.status !== 'terminated')
+  const visible = (isAuthenticated ? instances : demoInstances)?.filter(
+    (i) => i.status !== 'terminated',
+  )
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -324,6 +353,8 @@ export function ServersPage() {
 
   return (
     <div>
+      {!isAuthenticated && <DemoBanner />}
+
       <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-8 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white">
