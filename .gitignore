@@ -47,6 +47,10 @@ venv/
 # Local-only project notes (not pushed to GitHub)
 CLAUDE.md
 PROGRESS.md
+EC2-REDEPLOY.md
+
+# Design mockups (local-only, not pushed to GitHub)
+design/
 
 # Windows/WSL download-marker artifacts
 *:Zone.Identifier
