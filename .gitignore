@@ -54,3 +54,6 @@ design/
 
 # Windows/WSL download-marker artifacts
 *:Zone.Identifier
+
+# Design mockups (local-only, not pushed to GitHub)
+design/
