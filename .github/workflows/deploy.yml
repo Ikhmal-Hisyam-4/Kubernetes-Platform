@@ -77,6 +77,8 @@ jobs:
             docker compose -f docker-compose.prod.yml pull
             # Migrations run before the new code starts serving traffic.
             docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
+            # No-ops if plans/os_images already exist.
+            docker compose -f docker-compose.prod.yml run --rm api python -m app.seed
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
         env:
