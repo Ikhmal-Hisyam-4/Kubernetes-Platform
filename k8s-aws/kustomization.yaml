@@ -21,9 +21,9 @@ resources:
 
 images:
   - name: ikhmalhisyam4/kubex-api
-    newTag: prod-a94d56fe896b21450d32b9b16d94dea20e44faf7
+    newTag: prod-fb550e821ca97a1fa6d0a7ebe1ae0b5d2b2f24ba
   - name: ikhmalhisyam4/kubex-web
-    newTag: prod-a94d56fe896b21450d32b9b16d94dea20e44faf7
+    newTag: prod-fb550e821ca97a1fa6d0a7ebe1ae0b5d2b2f24ba
 
 patches:
   # wave -2: namespace, -1: config
