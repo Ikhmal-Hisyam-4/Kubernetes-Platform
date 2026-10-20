@@ -3,7 +3,8 @@
 # plus EC2-level resource usage (CPU/RAM/disk) on each node.
 #
 # Usage: ./scripts/health-check.sh
-# Reads node IPs from `terraform output`, so it stays correct even after IPs change.
+# Reads node IPs from `terraform output`, or from SERVER_IP / AGENT_IPS if set:
+#   SERVER_IP=1.2.3.4 AGENT_IPS="5.6.7.8 9.10.11.12" ./scripts/health-check.sh
 
 set -euo pipefail
 
@@ -14,8 +15,9 @@ SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 
 cd "$TF_DIR"
 
-SERVER_IP=$(terraform output -raw server_public_ip)
-AGENT_IPS=$(terraform output -json agent_public_ips | python3 -c "import json,sys; print(' '.join(json.load(sys.stdin)))")
+# SERVER_IP / AGENT_IPS (space-separated) can be passed in; otherwise read from terraform.
+SERVER_IP="${SERVER_IP:-$(terraform output -raw server_public_ip)}"
+AGENT_IPS="${AGENT_IPS:-$(terraform output -json agent_public_ips | python3 -c "import json,sys; print(' '.join(json.load(sys.stdin)))")}"
 
 echo "===================================================="
 echo " kubex-k3s cluster health check — $(date)"
