@@ -4,9 +4,10 @@ on:
   pull_request:
     branches: [development, main]
   # Safety net: also test direct pushes to development, in case something
-  # lands without going through a PR.
+  # lands without going through a PR. gitops/** are the image-tag bump branches
+  # opened by deploy.yml; main requires the push checks, so they must run there too.
   push:
-    branches: [development]
+    branches: [development, 'gitops/**']
 
 # A new push to the same PR (or branch) cancels the previous run.
 # The event name keeps PR runs and push runs in separate groups.
