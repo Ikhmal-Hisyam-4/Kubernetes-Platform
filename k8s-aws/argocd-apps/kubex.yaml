@@ -1,5 +1,7 @@
 # Argo CD Application for the kubex app (namespace: kubex).
-# Manual sync for now: Argo CD only shows what differs, it changes nothing.
+# Auto-sync: a merged change in git is deployed by Argo CD by itself.
+# selfHeal: manual edits on the cluster are reverted to what git says.
+# prune stays off: Argo CD never deletes objects that are missing from git.
 # No resources-finalizer on purpose: deleting this Application leaves the app running.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -15,3 +17,7 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: kubex
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
