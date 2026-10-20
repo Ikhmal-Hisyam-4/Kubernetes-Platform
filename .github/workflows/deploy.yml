@@ -3,6 +3,10 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # The tag-bump PR only touches this file. Merging it must not start another
+    # build, or we would loop: merge -> build -> new bump PR -> merge ...
+    paths-ignore:
+      - k8s-aws/kustomization.yaml
   # Lets you run the deploy by hand from the Actions tab (any branch).
   workflow_dispatch:
 
@@ -18,6 +22,7 @@ jobs:
   build-and-push:
     name: Build and push images
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, 'gitops/image-') }}
 
     steps:
       - uses: actions/checkout@v6
@@ -53,117 +58,43 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to k3s
+  # GitOps: GitHub no longer touches the cluster. It only records the new image
+  # tag in git (as a PR). Merging that PR is the approval; Argo CD then deploys it.
+  bump-image-tag:
+    name: Open PR with new image tag
     needs: build-and-push
     runs-on: ubuntu-latest
-    # Add a required reviewer on this environment in repo settings
-    # (Settings > Environments > production) to get the manual approval gate.
-    environment: production
     env:
-      IMAGE_TAG: prod-${{ github.sha }}
-      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-      SSH_TARGET: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}
-      SSH_OPTS: -i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30
+      TAG: prod-${{ github.sha }}
+      BRANCH: gitops/image-${{ github.run_number }}
+      # A PR opened with the built-in GITHUB_TOKEN does not trigger the required CI
+      # checks, so it could never be merged. This token (fine-grained, this repo
+      # only: Contents + Pull requests write) makes the PR trigger CI normally.
+      GH_TOKEN: ${{ secrets.GITOPS_TOKEN }}
 
     steps:
       - uses: actions/checkout@v6
-
-      # SSH on the cluster is locked to the owner's IP, so open port 22 to this
-      # runner only for the length of the job (closed again in the last step).
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          token: ${{ secrets.GITOPS_TOKEN }}
 
-      - name: Allow runner IP on SSH
+      - name: Set new tag in kustomization.yaml
         run: |
-          RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com)
-          echo "RUNNER_IP=${RUNNER_IP}" >> "$GITHUB_ENV"
-          aws ec2 authorize-security-group-ingress \
-            --group-id "${{ vars.K3S_SECURITY_GROUP_ID }}" \
-            --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
+          sed -i -E "s|(newTag: ).*|\1${TAG}|" k8s-aws/kustomization.yaml
+          git diff --stat
 
-      - name: Set up SSH key
+      - name: Open pull request
         run: |
-          install -m 600 /dev/null /tmp/deploy_key
-          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/deploy_key
-
-      # Give AWS a moment to apply the new security group rule.
-      - name: Wait for SSH
-        run: |
-          for i in $(seq 1 12); do
-            ssh $SSH_OPTS -o ConnectTimeout=10 "$SSH_TARGET" true && exit 0
-            sleep 5
-          done
-          echo "SSH never became reachable" >&2
-          exit 1
-
-      # Everything below is idempotent (kubectl apply), so the same steps work
-      # on a brand-new namespace and on later deploys.
-      - name: Copy manifests to server
-        run: |
-          tar czf - -C k8s-aws --exclude='secret.yaml*' . \
-            | ssh $SSH_OPTS "$SSH_TARGET" 'rm -rf ~/k8s-manifests && mkdir -p ~/k8s-manifests && tar xzf - -C ~/k8s-manifests'
-
-      - name: Apply namespace, secret, config, postgres, redis
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" 'cd ~/k8s-manifests && sudo kubectl apply -f namespace.yaml'
-          # secret.yaml is gitignored, so build the Secret from GitHub secrets.
-          kubectl create secret generic kubex-secret -n kubex \
-            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-            --from-literal=JWT_SECRET="$JWT_SECRET" \
-            --dry-run=client -o yaml \
-            | ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl apply -f -'
-          ssh $SSH_OPTS "$SSH_TARGET" bash -s <<'EOF'
-          set -e
-          cd ~/k8s-manifests
-          sudo kubectl apply -f configmap.yaml
-          sudo kubectl apply -f postgres.yaml
-          sudo kubectl apply -f redis.yaml
-          sudo kubectl rollout status deployment/postgres -n kubex --timeout=180s
-          sudo kubectl rollout status deployment/redis -n kubex --timeout=120s
-          EOF
-
-      # Migrations run before the new code starts serving traffic.
-      # Jobs are immutable, so delete + recreate with this run's image tag.
-      - name: Run migrate + seed job
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl delete job migrate-seed -n kubex --ignore-not-found'
-          ssh $SSH_OPTS "$SSH_TARGET" "sed 's|kubex-api:latest|kubex-api:${IMAGE_TAG}|' ~/k8s-manifests/migrate-seed-job.yaml | sudo kubectl apply -f -"
-          ssh $SSH_OPTS "$SSH_TARGET" \
-            'sudo kubectl wait --for=condition=complete job/migrate-seed -n kubex --timeout=180s' \
-            || { ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl logs -n kubex job/migrate-seed --tail=50'; exit 1; }
-
-      - name: Deploy backend + frontend
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" bash -s <<EOF
-          set -e
-          cd ~/k8s-manifests
-          sed "s|kubex-api:latest|kubex-api:${IMAGE_TAG}|" backend.yaml | sudo kubectl apply -f -
-          sed "s|kubex-web:latest|kubex-web:${IMAGE_TAG}|" frontend.yaml | sudo kubectl apply -f -
-          sudo kubectl apply -f ingress-frontend.yaml
-          sudo kubectl apply -f ingress-backend.yaml
-          sudo kubectl rollout status deployment/backend -n kubex --timeout=180s
-          sudo kubectl rollout status deployment/frontend -n kubex --timeout=180s
-          EOF
-
-      - name: Show cluster state
-        if: always()
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl get pods,svc,ingress -n kubex' || true
-
-      - name: Revoke runner IP
-        if: always()
-        run: |
-          rm -f /tmp/deploy_key
-          if [ -n "${RUNNER_IP:-}" ]; then
-            aws ec2 revoke-security-group-ingress \
-              --group-id "${{ vars.K3S_SECURITY_GROUP_ID }}" \
-              --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
+          if git diff --quiet; then
+            echo "Tag is already ${TAG}, nothing to do."
+            exit 0
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -am "deploy ${TAG}"
+          git push origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "deploy ${TAG}" \
+            --body "Sets the image tag to \`${TAG}\` (built from ${GITHUB_SHA}). Merge to let Argo CD deploy it."
