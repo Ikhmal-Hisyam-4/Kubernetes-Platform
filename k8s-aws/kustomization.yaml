@@ -12,6 +12,7 @@ resources:
   - configmap.yaml
   - postgres.yaml
   - redis.yaml
+  - postgres-backup.yaml
   - migrate-seed-job.yaml
   - backend.yaml
   - frontend.yaml
