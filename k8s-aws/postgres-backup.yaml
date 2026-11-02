@@ -1,0 +1,89 @@
+# Nightly Postgres backup to S3 (bucket keeps files for 14 days, see its lifecycle rule).
+# Step 1 (init container): pg_dump into a shared temp folder.
+# Step 2 (main container): upload that file to S3.
+# backup-aws is NOT in git. Create it once by hand:
+#   kubectl -n kubex create secret generic backup-aws \
+#     --from-literal=AWS_ACCESS_KEY_ID=... --from-literal=AWS_SECRET_ACCESS_KEY=...
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: kubex
+spec:
+  schedule: "0 19 * * *" # 19:00 UTC = 03:00 Malaysia time
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          restartPolicy: Never
+          initContainers:
+            - name: dump
+              image: postgres:16-alpine
+              command:
+                - sh
+                - -c
+                - pg_dump -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /backup/kubex_db.dump
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubex-config
+                      key: POSTGRES_USER
+                - name: POSTGRES_DB
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubex-config
+                      key: POSTGRES_DB
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: kubex-secret
+                      key: POSTGRES_PASSWORD
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+          containers:
+            - name: upload
+              image: amazon/aws-cli:2.31.35
+              command:
+                - sh
+                - -c
+                - >-
+                  aws s3 cp /backup/kubex_db.dump
+                  "s3://kubex-pg-backups-164092712009/kubex_db-$(date -u +%Y%m%d-%H%M%S).dump"
+              env:
+                - name: AWS_DEFAULT_REGION
+                  value: ap-southeast-5
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: backup-aws
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: backup-aws
+                      key: AWS_SECRET_ACCESS_KEY
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+          volumes:
+            - name: backup
+              emptyDir: {}
