@@ -17,9 +17,7 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
 
   const [step, setStep] = useState(1)
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
-  const [instanceName, setInstanceName] = useState(
-    type === 'gpu' ? 'My Gpu.kubex Server' : 'My Gpu.kubex CPU Server',
-  )
+  const [instanceName, setInstanceName] = useState('')
   const [osImage, setOsImage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,7 +37,7 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
       return (
         await api.post('/instances', {
           plan_id: selectedPlanId,
-          name: instanceName,
+          name: instanceName.trim(),
           os_image: osImage,
         })
       ).data
@@ -211,7 +209,7 @@ export function DeployWizard({ type }: { type: 'gpu' | 'cpu' }) {
             {step < 3 ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                disabled={step === 1 && !selectedPlanId}
+                disabled={(step === 1 && !selectedPlanId) || (step === 2 && !instanceName.trim())}
                 className="rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
               >
                 Continue
