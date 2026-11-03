@@ -23,17 +23,27 @@ spec:
           restartPolicy: Never
           initContainers:
             - name: dump
-              image: postgres:17-alpine # pg_dump must not be older than the server (Supabase = 17)
+              image: postgres:16-alpine
               command:
                 - sh
                 - -c
-                - pg_dump -d "$DATABASE_URL" -n public -Fc -f /backup/kubex_db.dump
+                - pg_dump -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /backup/kubex_db.dump
               env:
-                - name: DATABASE_URL
+                - name: POSTGRES_USER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubex-config
+                      key: POSTGRES_USER
+                - name: POSTGRES_DB
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubex-config
+                      key: POSTGRES_DB
+                - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: supabase-db
-                      key: DATABASE_URL
+                      name: kubex-secret
+                      key: POSTGRES_PASSWORD
               volumeMounts:
                 - name: backup
                   mountPath: /backup
