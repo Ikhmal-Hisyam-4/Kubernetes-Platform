@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from app.core.config import settings
 from app.models import Instance, Transaction, UsageRecord, User
-from app.services.billing_job import current_hour, run_hourly_billing
+from app.services.billing_job import current_hour, run_hourly_billing, storage_cost_cents_per_hour
 
 HOUR = datetime(2026, 8, 12, 4, 0, 0, tzinfo=timezone.utc)
 
 
 def storage_cost(storage_gb: int) -> int:
-    return storage_gb * settings.storage_rate_per_gb_hour_cents
+    return storage_cost_cents_per_hour(storage_gb)
 
 
 # --- the critical rule: running the job twice for one hour charges once ---

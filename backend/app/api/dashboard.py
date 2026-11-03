@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.instance import Instance
@@ -10,6 +11,7 @@ from app.models.usage_record import UsageRecord
 from app.models.user import User
 from app.schemas.usage import DashboardSummary
 from app.services.aggregation import current_month, month_bounds
+from app.services.billing_job import HOURS_PER_MONTH
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -22,11 +24,21 @@ def get_summary(
     current_user: User = Depends(get_current_user),
 ):
     # Totals are aggregated in SQL, never summed from a paginated list in the client.
-    active_instances, total_storage_gb, total_gpus = (
+    # Same per-instance formula as the billing job: current rate plus rounded storage.
+    hourly_rate = case(
+        (Instance.status == "running", Instance.rate_running_cents),
+        else_=Instance.rate_stopped_cents,
+    )
+    hourly_storage = (
+        Instance.storage_gb * settings.storage_rate_per_gb_month_cents * 2 + HOURS_PER_MONTH
+    ) // (2 * HOURS_PER_MONTH)
+
+    active_instances, total_storage_gb, total_gpus, hourly_cost_cents = (
         db.query(
             func.count(Instance.id),
             func.coalesce(func.sum(Instance.storage_gb), 0),
             func.coalesce(func.sum(Plan.gpu_count), 0),
+            func.coalesce(func.sum(hourly_rate + hourly_storage), 0),
         )
         .join(Plan, Plan.id == Instance.plan_id)
         .filter(
@@ -57,4 +69,5 @@ def get_summary(
         total_gpus=total_gpus,
         total_storage_gb=total_storage_gb,
         monthly_cost_cents=monthly_cost_cents,
+        hourly_cost_cents=hourly_cost_cents,
     )
