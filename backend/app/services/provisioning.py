@@ -9,9 +9,13 @@ def fake_ip_address() -> str:
     return f"10.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}"
 
 
-def dns_name_for_ip(ip_address: str) -> str:
-    """Builds an AWS EC2-style hostname from the fake IP, e.g. gpu-10-42-201-7.kubex.cloud."""
-    return f"gpu-{ip_address.replace('.', '-')}.kubex.cloud"
+REGION_SHORT = {"ap-southeast-1": "sg", "ap-southeast-5": "my"}
+
+
+def dns_name_for_ip(ip_address: str, location: str | None) -> str:
+    """Builds a short hostname from the fake IP and region, e.g. vm-10-42-201-7.sg.kubex.cloud."""
+    region = location.split(" ")[0] if location else ""
+    return f"vm-{ip_address.replace('.', '-')}.{REGION_SHORT.get(region, 'sg')}.kubex.cloud"
 
 
 def provision_instance(instance_id: int) -> None:
@@ -25,7 +29,7 @@ def provision_instance(instance_id: int) -> None:
             return
         instance.status = "running"
         instance.ip_address = fake_ip_address()
-        instance.dns_name = dns_name_for_ip(instance.ip_address)
+        instance.dns_name = dns_name_for_ip(instance.ip_address, instance.location)
         db.commit()
     finally:
         db.close()
