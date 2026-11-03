@@ -14,6 +14,7 @@ export const demoDashboardSummary: DashboardSummary = {
   total_gpus: 0,
   total_storage_gb: 150,
   monthly_cost_cents: 61200,
+  hourly_cost_cents: 84,
 }
 
 export const demoInstances: Instance[] = [
