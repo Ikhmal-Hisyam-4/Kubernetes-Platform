@@ -20,6 +20,16 @@ from app.models.usage_record import UsageRecord
 from app.models.user import User
 
 
+HOURS_PER_MONTH = 730
+
+
+def storage_cost_cents_per_hour(storage_gb: int) -> int:
+    """Hourly storage charge in whole cents, rounded half up from the monthly GB rate."""
+    return (storage_gb * settings.storage_rate_per_gb_month_cents * 2 + HOURS_PER_MONTH) // (
+        2 * HOURS_PER_MONTH
+    )
+
+
 def current_hour(now: datetime | None = None) -> datetime:
     now = now or datetime.now(timezone.utc)
     return now.replace(minute=0, second=0, microsecond=0)
@@ -34,7 +44,7 @@ def run_billing_for_hour(db: Session, hour: datetime) -> dict[int, int]:
     for inst in instances:
         rate = inst.rate_running_cents if inst.status == "running" else inst.rate_stopped_cents
         compute = rate
-        storage = inst.storage_gb * settings.storage_rate_per_gb_hour_cents
+        storage = storage_cost_cents_per_hour(inst.storage_gb)
 
         stmt = (
             pg_insert(UsageRecord)

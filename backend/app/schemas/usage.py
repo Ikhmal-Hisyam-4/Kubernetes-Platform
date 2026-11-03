@@ -32,3 +32,4 @@ class DashboardSummary(BaseModel):
     total_gpus: int
     total_storage_gb: int
     monthly_cost_cents: int
+    hourly_cost_cents: int

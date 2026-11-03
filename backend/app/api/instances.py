@@ -15,10 +15,8 @@ router = APIRouter(prefix="/instances", tags=["instances"])
 
 # Simulated datacenter regions, assigned randomly at deploy time (frozen, like the rate).
 LOCATIONS = [
-    "us-east-1 (Virginia)",
-    "us-west-2 (Oregon)",
-    "eu-central-1 (Frankfurt)",
     "ap-southeast-1 (Singapore)",
+    "ap-southeast-5 (Malaysia)",
 ]
 
 

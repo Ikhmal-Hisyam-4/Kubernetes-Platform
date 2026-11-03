@@ -13,7 +13,8 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:5173"
 
-    storage_rate_per_gb_hour_cents: int = 1
+    # $0.10 per GB per month, close to what GPU marketplaces charge for disk.
+    storage_rate_per_gb_month_cents: int = 10
 
 
 settings = Settings()
