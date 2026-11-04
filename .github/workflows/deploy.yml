@@ -3,6 +3,13 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # Docs and diagrams only: nothing to build or deploy.
+    # (A push that also changes code still runs.)
+    paths-ignore:
+      - '**.md'
+      - 'aws-kubernetes-platform/**'
+      - 'architecture-diagram/**'
+      - 'cicd-diagrams/**'
   # Lets you run the deploy by hand from the Actions tab (any branch).
   workflow_dispatch:
 
