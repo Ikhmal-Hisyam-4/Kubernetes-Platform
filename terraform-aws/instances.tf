@@ -1,17 +1,4 @@
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
 
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
 
 resource "random_password" "k3s_token" {
   length  = 48
@@ -35,7 +22,7 @@ resource "aws_eip" "server" {
 
 # k3s server (control-plane). Single node — no HA, per current scope.
 resource "aws_instance" "server" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.cluster.id]
@@ -53,6 +40,11 @@ resource "aws_instance" "server" {
   })
   user_data_replace_on_change = true
 
+  lifecycle {
+    ignore_changes = [user_data]
+  }
+
+
   tags = {
     Name = "${var.cluster_name}-server"
     Role = "k3s-server"
@@ -68,7 +60,7 @@ resource "aws_eip_association" "server" {
 resource "aws_instance" "agent" {
   count = var.agent_count
 
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.cluster.id]
@@ -85,6 +77,11 @@ resource "aws_instance" "agent" {
     node_name         = "${var.cluster_name}-agent-${count.index + 1}"
   })
   user_data_replace_on_change = true
+  
+  lifecycle {
+    ignore_changes = [user_data]
+  }
+
 
   tags = {
     Name = "${var.cluster_name}-agent-${count.index + 1}"
