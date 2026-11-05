@@ -22,8 +22,14 @@ permissions:
   contents: read
 
 jobs:
+  # Same checks as ci.yml. If any fail, nothing is built, pushed or deployed.
+  test:
+    name: Test
+    uses: ./.github/workflows/ci.yml
+
   build-and-push:
     name: Build and push images
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
