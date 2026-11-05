@@ -12,12 +12,13 @@ here. The previous Docker Compose EC2 box has been decommissioned.
 
 ## First-time setup
 
-```
-cp secret.yaml.example secret.yaml
-# edit secret.yaml: set POSTGRES_PASSWORD and JWT_SECRET to real values
-```
+`kubex-secret` (POSTGRES_PASSWORD, JWT_SECRET) is no longer created by hand.
+It's pulled automatically from AWS Secrets Manager (`kubex/app-secret`) by the
+External Secrets Operator, using the EC2 instance role — see
+`secret-store.yaml` and `external-secret.yaml`. Apply those once; after that
+the operator keeps `kubex-secret` in sync (refreshes hourly).
 
-`secret.yaml` is gitignored — never commit it.
+`secret.yaml.example` is kept only as a reference for what keys exist.
 
 ## Deploy
 
@@ -32,7 +33,8 @@ Then, on the server, apply in this order:
 
 ```
 kubectl apply -f namespace.yaml
-kubectl apply -f secret.yaml
+kubectl apply -f secret-store.yaml
+kubectl apply -f external-secret.yaml
 kubectl apply -f configmap.yaml
 kubectl apply -f postgres.yaml
 kubectl apply -f redis.yaml

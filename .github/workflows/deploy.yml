@@ -108,8 +108,11 @@ jobs:
           exit 1
 
       # Everything below is idempotent (kubectl apply).
-      # kubex-secret, supabase-db, backup-aws and alertmanager-smtp are NOT in git.
+      # supabase-db, backup-aws and alertmanager-smtp are NOT in git.
       # They already exist in the cluster and are never touched here.
+      # kubex-secret is managed by the External Secrets Operator (see
+      # secret-store.yaml / external-secret.yaml) — synced from AWS Secrets
+      # Manager, not applied by hand.
       - name: Copy manifests to server
         run: |
           tar czf - -C k8s-aws --exclude='secret.yaml*' --exclude='argocd*' . \
@@ -121,6 +124,8 @@ jobs:
           set -e
           cd ~/k8s-manifests
           sudo kubectl apply -f namespace.yaml
+          sudo kubectl apply -f secret-store.yaml
+          sudo kubectl apply -f external-secret.yaml
           sudo kubectl apply -f configmap.yaml
           sudo kubectl apply -f postgres.yaml
           sudo kubectl apply -f redis.yaml
