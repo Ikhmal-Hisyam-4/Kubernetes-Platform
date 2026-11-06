@@ -16,6 +16,7 @@ The application simulates a **GPU cloud marketplace** called Kubex — where use
 > **Live:** https://gpu.kubex.my
 > **Full Documentation:** https://www.notion.so/370f5cca41248112ad22f06d5a35f8f6
 > **GitLab:** https://gitlab.com/ikhmal/kubernetes-platform
+> **AWS version:** the same app also runs on AWS (k3s on EC2, Terraform, GitHub Actions). See [aws-kubernetes-platform/](aws-kubernetes-platform/README.md).
 
 ---
 
