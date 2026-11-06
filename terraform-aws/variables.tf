@@ -49,3 +49,10 @@ variable "root_volume_size" {
   type        = number
   default     = 20
 }
+
+variable "ami_id" {
+  description = "AMI ID for all nodes — pinned so Terraform doesn't drift when AWS releases a new 'latest' Amazon Linux build. Update deliberately, not automatically."
+  type        = string
+  default     = "ami-042a3555520dfbf24"
+}
+

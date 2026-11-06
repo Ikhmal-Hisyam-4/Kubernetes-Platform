@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  # Lets deploy.yml run these same checks before it builds and deploys.
+  workflow_call:
   pull_request:
     branches: [development, main]
   # Safety net: also test direct pushes to development, in case something

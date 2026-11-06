@@ -61,3 +61,6 @@ design/
 
 # Design mockups (local-only, not pushed to GitHub)
 design/
+
+
+*.tfstate.*
