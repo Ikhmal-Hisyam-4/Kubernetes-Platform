@@ -27,6 +27,8 @@ resource "aws_instance" "server" {
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.cluster.id]
   key_name               = aws_key_pair.this.key_name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_secrets.name
+
 
   root_block_device {
     volume_size = var.root_volume_size
@@ -65,6 +67,8 @@ resource "aws_instance" "agent" {
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.cluster.id]
   key_name               = aws_key_pair.this.key_name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_secrets.name
+
 
   root_block_device {
     volume_size = var.root_volume_size
@@ -77,7 +81,7 @@ resource "aws_instance" "agent" {
     node_name         = "${var.cluster_name}-agent-${count.index + 1}"
   })
   user_data_replace_on_change = true
-  
+
   lifecycle {
     ignore_changes = [user_data]
   }
