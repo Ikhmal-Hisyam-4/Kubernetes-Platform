@@ -69,49 +69,18 @@ jobs:
   deploy:
     name: Deploy to k3s
     needs: build-and-push
-    runs-on: ubuntu-latest
+    # Self-hosted runner on k3s agent-1 (label kubex-deploy). It talks to the
+    # cluster with the limited `deployer` account (k8s-aws/deployer-rbac.yaml),
+    # so no SSH, no open port 22 and no AWS keys are needed.
+    runs-on: [self-hosted, kubex-deploy]
     # Add a required reviewer on this environment in repo settings
     # (Settings > Environments > production) to get the manual approval gate.
     environment: production
     env:
       IMAGE_TAG: prod-${{ github.sha }}
-      SSH_TARGET: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}
-      SSH_OPTS: -i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30
 
     steps:
       - uses: actions/checkout@v6
-
-      # SSH on the cluster is locked to the owner's IP, so open port 22 to this
-      # runner only for the length of the job (closed again in the last step).
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Allow runner IP on SSH
-        run: |
-          RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com)
-          echo "RUNNER_IP=${RUNNER_IP}" >> "$GITHUB_ENV"
-          aws ec2 authorize-security-group-ingress \
-            --group-id "${{ vars.K3S_SECURITY_GROUP_ID }}" \
-            --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
-
-      - name: Set up SSH key
-        run: |
-          install -m 600 /dev/null /tmp/deploy_key
-          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/deploy_key
-
-      # Give AWS a moment to apply the new security group rule.
-      - name: Wait for SSH
-        run: |
-          for i in $(seq 1 12); do
-            ssh $SSH_OPTS -o ConnectTimeout=10 "$SSH_TARGET" true && exit 0
-            sleep 5
-          done
-          echo "SSH never became reachable" >&2
-          exit 1
 
       # Everything below is idempotent (kubectl apply).
       # supabase-db, backup-aws and alertmanager-smtp are NOT in git.
@@ -119,61 +88,40 @@ jobs:
       # kubex-secret is managed by the External Secrets Operator (see
       # secret-store.yaml / external-secret.yaml) — synced from AWS Secrets
       # Manager, not applied by hand.
-      - name: Copy manifests to server
+      # namespace.yaml is not applied: the namespace already exists and the
+      # deployer account is limited to it.
+      - name: Apply config, postgres, redis, backup
+        working-directory: k8s-aws
         run: |
-          tar czf - -C k8s-aws --exclude='secret.yaml*' --exclude='argocd*' . \
-            | ssh $SSH_OPTS "$SSH_TARGET" 'rm -rf ~/k8s-manifests && mkdir -p ~/k8s-manifests && tar xzf - -C ~/k8s-manifests'
-
-      - name: Apply namespace, config, postgres, redis, backup
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" bash -s <<'EOF'
-          set -e
-          cd ~/k8s-manifests
-          sudo kubectl apply -f namespace.yaml
-          sudo kubectl apply -f secret-store.yaml
-          sudo kubectl apply -f external-secret.yaml
-          sudo kubectl apply -f configmap.yaml
-          sudo kubectl apply -f postgres.yaml
-          sudo kubectl apply -f redis.yaml
-          sudo kubectl apply -f postgres-backup.yaml
-          sudo kubectl rollout status deployment/postgres -n kubex --timeout=180s
-          sudo kubectl rollout status deployment/redis -n kubex --timeout=120s
-          EOF
+          kubectl apply -f secret-store.yaml
+          kubectl apply -f external-secret.yaml
+          kubectl apply -f configmap.yaml
+          kubectl apply -f postgres.yaml
+          kubectl apply -f redis.yaml
+          kubectl apply -f postgres-backup.yaml
+          kubectl rollout status deployment/postgres -n kubex --timeout=180s
+          kubectl rollout status deployment/redis -n kubex --timeout=120s
 
       # Migrations run before the new code starts serving traffic.
       # Jobs are immutable, so delete + recreate with this run's image tag.
       - name: Run migrate + seed job
+        working-directory: k8s-aws
         run: |
-          ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl delete job migrate-seed -n kubex --ignore-not-found'
-          ssh $SSH_OPTS "$SSH_TARGET" "sed 's|kubex-api:latest|kubex-api:${IMAGE_TAG}|' ~/k8s-manifests/migrate-seed-job.yaml | sudo kubectl apply -f -"
-          ssh $SSH_OPTS "$SSH_TARGET" \
-            'sudo kubectl wait --for=condition=complete job/migrate-seed -n kubex --timeout=180s' \
-            || { ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl logs -n kubex job/migrate-seed --tail=50'; exit 1; }
+          kubectl delete job migrate-seed -n kubex --ignore-not-found
+          sed "s|kubex-api:latest|kubex-api:${IMAGE_TAG}|" migrate-seed-job.yaml | kubectl apply -f -
+          kubectl wait --for=condition=complete job/migrate-seed -n kubex --timeout=180s \
+            || { kubectl logs -n kubex job/migrate-seed --tail=50; exit 1; }
 
       - name: Deploy backend + frontend
+        working-directory: k8s-aws
         run: |
-          ssh $SSH_OPTS "$SSH_TARGET" bash -s <<EOF
-          set -e
-          cd ~/k8s-manifests
-          sed "s|kubex-api:latest|kubex-api:${IMAGE_TAG}|" backend.yaml | sudo kubectl apply -f -
-          sed "s|kubex-web:latest|kubex-web:${IMAGE_TAG}|" frontend.yaml | sudo kubectl apply -f -
-          sudo kubectl apply -f ingress-frontend.yaml
-          sudo kubectl apply -f ingress-backend.yaml
-          sudo kubectl rollout status deployment/backend -n kubex --timeout=180s
-          sudo kubectl rollout status deployment/frontend -n kubex --timeout=180s
-          EOF
+          sed "s|kubex-api:latest|kubex-api:${IMAGE_TAG}|" backend.yaml | kubectl apply -f -
+          sed "s|kubex-web:latest|kubex-web:${IMAGE_TAG}|" frontend.yaml | kubectl apply -f -
+          kubectl apply -f ingress-frontend.yaml
+          kubectl apply -f ingress-backend.yaml
+          kubectl rollout status deployment/backend -n kubex --timeout=180s
+          kubectl rollout status deployment/frontend -n kubex --timeout=180s
 
       - name: Show cluster state
         if: always()
-        run: |
-          ssh $SSH_OPTS "$SSH_TARGET" 'sudo kubectl get pods,svc,ingress -n kubex' || true
-
-      - name: Revoke runner IP
-        if: always()
-        run: |
-          rm -f /tmp/deploy_key
-          if [ -n "${RUNNER_IP:-}" ]; then
-            aws ec2 revoke-security-group-ingress \
-              --group-id "${{ vars.K3S_SECURITY_GROUP_ID }}" \
-              --protocol tcp --port 22 --cidr "${RUNNER_IP}/32"
-          fi
+        run: kubectl get pods,svc,ingress -n kubex || true
