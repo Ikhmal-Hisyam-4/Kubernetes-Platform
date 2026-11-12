@@ -1,0 +1,11 @@
+# Run the cluster + app health check on its own, any time. Read-only.
+#   ansible-playbook health-check.yml
+- name: Health check
+  hosts: k3s_server
+  gather_facts: false
+
+  tasks:
+    - name: Run the health check
+      ansible.builtin.include_tasks: tasks/health-check.yml
+      vars:
+        check_stage: manual

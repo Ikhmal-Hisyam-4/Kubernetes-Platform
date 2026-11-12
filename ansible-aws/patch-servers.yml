@@ -1,0 +1,66 @@
+# Patch the k3s nodes (Amazon Linux 2023) the careful way:
+#
+#   1. Pre-flight health check of the whole cluster (stop if anything is wrong)
+#   2. For each node, one at a time (agents first, control plane last):
+#        health check -> security updates -> (optional reboot) -> health check
+#   3. If a step fails: roll the packages back, check health again, stop the run.
+#
+# Dry run (changes nothing, shows what would be installed):
+#   ansible-playbook patch-servers.yml --check
+# Patch, no reboot:
+#   ansible-playbook patch-servers.yml
+# Patch and reboot nodes that need it (kernel updates etc.):
+#   ansible-playbook patch-servers.yml -e allow_reboot=true
+#
+# Notes:
+# - No node drain: Postgres uses a local-path volume tied to one node, so draining
+#   would only strand it. Rebooting the node that runs Postgres means a short
+#   database outage (about 1-2 minutes).
+# - There is one control-plane node. While it reboots, kubectl and the API are
+#   unavailable, but the running app keeps working.
+# - Before a real run: check the last backup, and do not run during a deploy.
+# - Stronger safety net (not included): take an EBS snapshot of each node first.
+
+- name: 1. Pre-flight health check (nothing is changed)
+  hosts: k3s_server
+  gather_facts: false
+
+  tasks:
+    - name: Run the health check
+      ansible.builtin.include_tasks: tasks/health-check.yml
+      vars:
+        check_stage: pre-flight
+
+    - name: Show when the last Postgres backup succeeded
+      ansible.builtin.command: kubectl -n kubex get cronjob postgres-backup -o jsonpath='{.status.lastSuccessfulTime}'
+      register: last_backup
+      changed_when: false
+      check_mode: false
+
+    - name: Last successful backup
+      ansible.builtin.debug:
+        msg: "Last successful Postgres backup: {{ last_backup.stdout }}"
+
+- name: 2a. Patch the agents, one at a time
+  hosts: k3s_agents
+  become: true
+  serial: 1
+  any_errors_fatal: true
+  vars:
+    allow_reboot: false
+
+  tasks:
+    - name: Patch this node
+      ansible.builtin.include_tasks: tasks/patch-node.yml
+
+- name: 2b. Patch the control-plane server last
+  hosts: k3s_server
+  become: true
+  serial: 1
+  any_errors_fatal: true
+  vars:
+    allow_reboot: false
+
+  tasks:
+    - name: Patch this node
+      ansible.builtin.include_tasks: tasks/patch-node.yml

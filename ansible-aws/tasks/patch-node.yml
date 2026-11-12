@@ -1,0 +1,135 @@
+# Patch ONE node: check -> patch -> check, and roll back if anything fails.
+# Included by patch-servers.yml. Runs with become: true.
+#
+# Rollback uses "dnf history undo <transaction id>" for THIS run's update only.
+# Limit: if a kernel update was installed AND the node already rebooted into it,
+# dnf will not remove the running kernel. The play then stops and tells you so;
+# fix by hand (grubby --set-default to the old kernel, reboot, then dnf history undo).
+
+- name: Patch {{ inventory_hostname }} with automatic rollback
+  block:
+    # ---------- 1. Checks BEFORE touching this node ----------
+    - name: Check there is enough free disk on / (at least 2 GB)
+      ansible.builtin.assert:
+        that:
+          - (ansible_facts.mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_available') | first) > 2147483648
+        fail_msg: "Less than 2 GB free on / - not patching."
+
+    - name: Health check before patching this node
+      ansible.builtin.include_tasks: health-check.yml
+      vars:
+        check_stage: pre
+
+    # ---------- 2. Patch ----------
+    - name: Remember the last dnf transaction id (before)
+      ansible.builtin.shell: dnf history list | awk '$1 ~ /^[0-9]+$/ {print $1; exit}'
+      register: pre_id
+      changed_when: false
+      check_mode: false
+
+    - name: Install security updates
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        security: true
+        lock_timeout: 60
+      register: patch_result
+
+    - name: Remember the last dnf transaction id (after)
+      ansible.builtin.shell: dnf history list | awk '$1 ~ /^[0-9]+$/ {print $1; exit}'
+      register: post_id
+      changed_when: false
+      check_mode: false
+
+    - name: Work out if this run installed anything
+      ansible.builtin.set_fact:
+        patched: "{{ post_id.stdout != pre_id.stdout }}"
+        update_id: "{{ post_id.stdout }}"
+
+    - name: Show what was updated
+      ansible.builtin.debug:
+        msg: "{{ patch_result.results | default([]) }}"
+
+    # ---------- 3. Make sure the node can survive a reboot ----------
+    - name: Check the SSH config is valid (so we cannot lock ourselves out)
+      ansible.builtin.command: sshd -t
+      changed_when: false
+      check_mode: false
+
+    - name: Check the k3s service starts on boot
+      ansible.builtin.command: systemctl is-enabled {{ k3s_service }}
+      changed_when: false
+      check_mode: false
+
+    - name: Check if a reboot is required
+      ansible.builtin.command: needs-restarting -r
+      register: reboot_check
+      changed_when: false
+      failed_when: reboot_check.rc not in [0, 1]
+      check_mode: false
+
+    - name: Show reboot status
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: reboot required = {{ reboot_check.rc == 1 }}, allow_reboot = {{ allow_reboot }}"
+
+    - name: Reboot (only if required and allow_reboot=true)
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+      when: reboot_check.rc == 1 and allow_reboot | bool
+
+    - name: Remember that this node rebooted
+      ansible.builtin.set_fact:
+        rebooted: true
+      when: reboot_check.rc == 1 and allow_reboot | bool
+
+    # ---------- 4. Checks AFTER patching ----------
+    - name: Check the k3s service is running on this node
+      ansible.builtin.command: systemctl is-active {{ k3s_service }}
+      register: svc_check
+      until: svc_check.stdout == "active"
+      retries: 12
+      delay: 10
+      changed_when: false
+      check_mode: false
+
+    - name: Health check after patching this node
+      ansible.builtin.include_tasks: health-check.yml
+      vars:
+        check_stage: post
+
+  rescue:
+    # ---------- Something failed: roll back ----------
+    - name: What failed
+      ansible.builtin.debug:
+        msg: "FAILED on {{ inventory_hostname }} at task '{{ ansible_failed_task.name }}'. Packages were updated in this run: {{ patched | default(false) }}."
+
+    - name: ROLLBACK - undo this run's package update
+      ansible.builtin.command: dnf history undo {{ update_id }} -y
+      when: patched | default(false) | bool
+      register: rollback_result
+      ignore_errors: true
+
+    - name: ROLLBACK - reboot again so the old packages are loaded
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+      when:
+        - patched | default(false) | bool
+        - rebooted | default(false) | bool
+        - rollback_result is succeeded
+
+    - name: ROLLBACK - health check
+      ansible.builtin.include_tasks: health-check.yml
+      vars:
+        check_stage: rollback
+
+    - name: Stop the whole run (other nodes are NOT touched)
+      ansible.builtin.fail:
+        msg: >-
+          Patch failed on {{ inventory_hostname }}.
+          {% if patched | default(false) | bool %}
+          Rollback of dnf transaction {{ update_id }}:
+          {{ 'succeeded' if rollback_result is succeeded else 'FAILED - fix by hand (see the notes at the top of tasks/patch-node.yml)' }}.
+          {% else %}
+          Nothing was patched on this node.
+          {% endif %}
+          The remaining nodes were left untouched.

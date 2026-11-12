@@ -1,0 +1,33 @@
+# Same SSH hardening we first did by hand with vi on all 3 nodes.
+# Run:  ansible-playbook ssh-hardening.yml
+# Dry run (shows what would change, changes nothing):
+#       ansible-playbook ssh-hardening.yml --check --diff
+- name: Harden SSH on all k3s nodes
+  hosts: all
+  become: true
+
+  tasks:
+    # A drop-in file, read before 50-redhat.conf, so our values win.
+    # AllowTcpForwarding is NOT set on purpose: `ssh -L` (Alertmanager) needs it.
+    - name: Write SSH hardening drop-in
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/10-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by Ansible (ansible-aws/ssh-hardening.yml)
+          X11Forwarding no
+          AllowAgentForwarding no
+          MaxAuthTries 3
+          LogLevel VERBOSE
+        # Test the file with sshd before it is put in place.
+        validate: /usr/sbin/sshd -t -f %s
+      notify: Reload sshd
+
+  handlers:
+    # Only runs if the file above changed. Reload keeps current sessions alive.
+    - name: Reload sshd
+      ansible.builtin.service:
+        name: sshd
+        state: reloaded

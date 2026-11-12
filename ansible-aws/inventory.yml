@@ -1,0 +1,21 @@
+# The 3 k3s nodes, reached over Tailscale (these IPs do not change when the
+# EC2 instances are stopped and started, unlike the agents' public IPs).
+all:
+  vars:
+    ansible_user: ec2-user
+    ansible_python_interpreter: /usr/bin/python3.9
+  children:
+    k3s_server:
+      vars:
+        k3s_service: k3s
+      hosts:
+        kubex-k3s-server:
+          ansible_host: 100.108.16.66
+    k3s_agents:
+      vars:
+        k3s_service: k3s-agent
+      hosts:
+        kubex-k3s-agent-1:
+          ansible_host: 100.108.212.45
+        kubex-k3s-agent-2:
+          ansible_host: 100.107.107.68

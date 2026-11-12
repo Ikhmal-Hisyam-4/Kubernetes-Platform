@@ -1,0 +1,53 @@
+# Cluster + app health check. Included before and after patching.
+# Needs the variable check_stage (pre-flight / pre / post / rollback) for the task names.
+# Every task here is read-only, so it also runs in --check mode.
+# kubectl runs on the k3s server as ec2-user (admin kubeconfig in ~/.kube/config).
+
+- name: "[{{ check_stage }}] All nodes are Ready"
+  ansible.builtin.shell: |
+    set -o pipefail
+    total=$(kubectl get nodes --no-headers | wc -l)
+    [ "$total" -eq {{ groups['all'] | length }} ] || echo "expected {{ groups['all'] | length }} nodes, found $total"
+    kubectl get nodes --no-headers | awk '$2 != "Ready"'
+  args:
+    executable: /bin/bash
+  register: nodes_check
+  until: nodes_check.rc == 0 and nodes_check.stdout == ""
+  retries: 20
+  delay: 15
+  failed_when: nodes_check.rc != 0 or nodes_check.stdout != ""
+  changed_when: false
+  check_mode: false
+  become: false
+  delegate_to: "{{ groups['k3s_server'][0] }}"
+  run_once: true
+
+- name: "[{{ check_stage }}] Kubex deployments are available (backend, frontend, postgres, redis)"
+  ansible.builtin.command: kubectl -n kubex wait --for=condition=available deployment --all --timeout=60s
+  register: deploy_check
+  until: deploy_check.rc == 0
+  retries: 5
+  delay: 15
+  changed_when: false
+  check_mode: false
+  become: false
+  delegate_to: "{{ groups['k3s_server'][0] }}"
+  run_once: true
+
+# Runs on your laptop, so it tests the real path: Cloudflare -> ingress -> app.
+- name: "[{{ check_stage }}] App and API answer with HTTP 200"
+  ansible.builtin.uri:
+    url: "{{ item }}"
+    status_code: 200
+    timeout: 10
+  loop:
+    - https://app.kubex.my/
+    - https://api.kubex.my/plans
+  register: url_check
+  until: url_check.status | default(0) == 200
+  retries: 12
+  delay: 10
+  check_mode: false
+  become: false
+  delegate_to: localhost
+  run_once: true
