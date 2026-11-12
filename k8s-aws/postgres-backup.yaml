@@ -11,6 +11,10 @@ metadata:
   namespace: kubex
 spec:
   schedule: "0 19 * * *" # 19:00 UTC = 03:00 Malaysia time
+  # If the cluster was off at 03:00, do NOT run the missed backup when it starts
+  # again: Postgres is not ready yet, so it fails and triggers a false alarm.
+  # A run more than 15 minutes late is skipped; the next night's backup runs normally.
+  startingDeadlineSeconds: 900
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

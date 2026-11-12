@@ -60,6 +60,11 @@ data:
           - source_labels: [__meta_kubernetes_node_name]
             target_label: instance
 
+      # state of pods, deployments, jobs and cronjobs (see kube-state-metrics.yaml)
+      - job_name: kube-state-metrics
+        static_configs:
+          - targets: ["kube-state-metrics:8080"]
+
       # per-container CPU/RAM via each kubelet's cAdvisor, through the API server
       - job_name: cadvisor
         scheme: https
@@ -113,6 +118,41 @@ data:
             annotations:
               summary: "Node {{ $labels.instance }} disk above 85%"
               description: "Root disk on {{ $labels.instance }} is {{ $value | humanizePercentage }} full."
+      - name: kubernetes-apps
+        rules:
+          - alert: PodCrashLooping
+            expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} keeps restarting"
+              description: "Container {{ $labels.container }} restarted about {{ $value | printf \"%.0f\" }} times in 15 minutes. Check: kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} --previous"
+          # 5m so a slow start after the instances are switched on does not alert.
+          - alert: DeploymentUnavailable
+            expr: kube_deployment_status_replicas_available == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ $labels.namespace }}/{{ $labels.deployment }} has no running pods"
+              description: "Deployment {{ $labels.deployment }} in {{ $labels.namespace }} has had 0 available pods for 5 minutes."
+          - alert: BackupJobFailed
+            expr: kube_job_status_failed{namespace="kubex", job_name=~"postgres-backup.*"} > 0
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Postgres backup job {{ $labels.job_name }} failed"
+              description: "Check: kubectl -n kubex logs job/{{ $labels.job_name }}. The alert clears when the failed job is deleted or rotated out by newer jobs."
+          - alert: BackupTooOld
+            expr: time() - kube_cronjob_status_last_successful_time{namespace="kubex", cronjob="postgres-backup"} > 30 * 3600
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "No successful Postgres backup for 30 hours"
+              description: "The last successful backup was {{ $value | humanizeDuration }} ago. It runs daily at 03:00 Malaysia time, only while the cluster is on."
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
